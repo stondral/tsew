@@ -4,6 +4,7 @@ import { getFeaturedProducts } from "@/lib/payload/products";
 
 export default async function HomePage() {
   const featuredProducts = await getFeaturedProducts(16);
+  console.log(`🏠 HomePage: Found ${featuredProducts.length} featured products`);
 
   return (
     <>

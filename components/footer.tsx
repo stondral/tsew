@@ -93,31 +93,22 @@ export default function Footer() {
                 → All Products
               </Link>
               <Link
-                href="/about"
+                href="/about-us"
                 className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
               >
                 → About Us
               </Link>
+              <div className="block text-gray-400 cursor-not-allowed text-sm">
+                → Contact (Coming Soon)
+              </div>
+              <div className="block text-gray-400 cursor-not-allowed text-sm">
+                → Shipping & Returns (Coming Soon)
+              </div>
+              <div className="block text-gray-400 cursor-not-allowed text-sm">
+                → FAQ (Coming Soon)
+              </div>
               <Link
-                href="/contact"
-                className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
-              >
-                → Contact Support
-              </Link>
-              <Link
-                href="/shipping"
-                className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
-              >
-                → Shipping & Returns
-              </Link>
-              <Link
-                href="/faq"
-                className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
-              >
-                → FAQ
-              </Link>
-              <Link
-                href="/selleronboard"
+                href="/auth/register"
                 className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
               >
                 → Become a seller

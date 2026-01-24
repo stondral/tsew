@@ -49,8 +49,16 @@ export default buildConfig({
   }),
   sharp,
   serverURL: process.env.NEXT_PUBLIC_PAYLOAD_URL || "http://localhost:3000",
-  cors: [process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.stondemporium.tech", "http://localhost:3000"],
-  csrf: [process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.stondemporium.tech", "http://localhost:3000"],
+  cors: [
+    "https://stondemporium.tech",
+    "https://www.stondemporium.tech",
+    "http://localhost:3000"
+  ],
+  csrf: [
+    "https://stondemporium.tech",
+    "https://www.stondemporium.tech",
+    "http://localhost:3000"
+  ],
   plugins: [
     s3Storage({
       collections: {
