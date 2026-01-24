@@ -1,0 +1,392 @@
+import type { CollectionConfig, CollectionSlug } from 'payload'
+
+export const Products: CollectionConfig = {
+  slug: 'products',
+  versions: true,
+
+  admin: {
+    useAsTitle: 'name',
+    defaultColumns: ['name', 'status', 'featured', 'seller', 'isActive'],
+  },
+
+  /* ─────────────────────────────
+     ACCESS CONTROL
+  ───────────────────────────── */
+
+  access: {
+    read: ({ req }) => {
+      // Public storefront
+      if (!req.user) {
+        return {
+          status: { equals: 'live' },
+          isActive: { equals: true },
+        } as any
+      }
+
+      const role = (req.user as any).role
+
+      // Admin sees everything
+      if (role === 'admin') return true
+
+      // Seller sees ONLY their products
+      if (role === 'seller') {
+        return {
+          seller: { equals: req.user.id },
+        } as any
+      }
+
+      // Logged-in buyers
+      return {
+        status: { equals: 'live' },
+        isActive: { equals: true },
+      } as any
+    },
+
+    create: ({ req }) =>
+      (req.user as any)?.role === 'seller' ||
+      (req.user as any)?.role === 'admin',
+
+    update: ({ req }) => {
+      if ((req.user as any)?.role === 'admin') return true
+
+      if ((req.user as any)?.role === 'seller') {
+        return {
+          seller: { equals: req.user!.id },
+        } as any
+      }
+
+      return false
+    },
+
+    delete: ({ req }) => {
+      if ((req.user as any)?.role === 'admin') return true
+
+      if ((req.user as any)?.role === 'seller') {
+        return {
+          seller: { equals: req.user!.id },
+        } as any
+      }
+
+      return false
+    },
+  },
+
+  /* ─────────────────────────────
+     HOOKS
+  ───────────────────────────── */
+
+  hooks: {
+    beforeChange: [
+      // Auto-assign seller + enforce pending state
+      ({ req, data, operation }) => {
+        if (operation === 'create' && (req.user as any)?.role === 'seller') {
+          data.seller = req.user!.id
+          data.status = 'pending'
+        }
+
+        // Auto-generate slug
+        if (data.name && !data.slug) {
+          data.slug = data.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+        }
+
+        return data
+      },
+
+      async ({ data, originalDoc, operation, req }) => {
+        if (operation !== 'update') return data
+        if (!originalDoc?.variants || !data?.variants) return data
+
+        const removedVariants = originalDoc.variants.filter(
+          (oldVar: any) =>
+            !data.variants.some((v: any) => v.id === oldVar.id)
+        )
+
+        for (const variant of removedVariants) {
+          const orders = await req.payload.find({
+            collection: 'orders' as CollectionSlug,
+            where: {
+              'items.variantId': { equals: variant.id },
+            },
+            limit: 1,
+          })
+
+          if (orders.totalDocs > 0) {
+            throw new Error(
+              `Variant "${variant.name}" cannot be deleted — already used in orders`
+            )
+          }
+        }
+
+        return data
+      },
+    ],
+
+    // 🔥 AUTO-EXPIRE FEATURED PRODUCTS (NO CRON)
+    beforeRead: [
+      async ({ req }) => {
+        const now = new Date().toISOString()
+
+        // Guard: only run if expired featured products exist
+        const expired = await req.payload.find({
+          collection: 'products' as CollectionSlug,
+          where: {
+            featured: { equals: true },
+            featuredUntil: { less_than: now },
+          },
+          limit: 1,
+        })
+
+        if (expired.totalDocs > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (req.payload as any).update({
+            collection: 'products',
+            where: {
+              featured: { equals: true },
+              featuredUntil: { less_than: now },
+            },
+            data: {
+              featured: false,
+            },
+          })
+        }
+      },
+    ],
+  },
+
+  /* ─────────────────────────────
+     FIELDS
+  ───────────────────────────── */
+
+  fields: [
+    /* FEATURED (ADMIN-ONLY, PAID VISIBILITY) */
+
+    {
+      name: 'featured',
+      type: 'checkbox',
+      defaultValue: false,
+      access: {
+        create: ({ req }) => (req.user as any)?.role === 'admin',
+        update: ({ req }) => (req.user as any)?.role === 'admin',
+      },
+      admin: {
+        position: 'sidebar',
+        description: 'Featured products appear on the home page',
+      },
+    },
+
+    {
+      name: 'featuredUntil',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        description: 'Feature expires automatically after this date',
+        condition: (_, siblingData) => siblingData?.featured === true,
+      },
+    },
+
+    /* CORE */
+
+    {
+      name: 'name',
+      type: 'text',
+      required: true,
+      index: true,
+    },
+
+    {
+      name: 'slug',
+      type: 'text',
+      access: {
+        create: ({ req }) => (req.user as any)?.role === 'admin',
+        update: ({ req }) => (req.user as any)?.role === 'admin',
+      },
+      unique: true,
+      index: true,
+      admin: {
+        description: 'Auto-generated from product name',
+      },
+    },
+
+    {
+      name: 'description',
+      type: 'textarea',
+      required: true,
+    },
+
+    /* PRICING */
+
+    {
+      name: 'basePrice',
+      type: 'number',
+      required: true,
+      min: 0,
+    },
+
+    {
+      name: 'compareAtPrice',
+      type: 'number',
+      min: 0,
+    },
+
+    /* INVENTORY */
+
+    {
+      name: 'sku',
+      type: 'text',
+      admin: {
+        description: 'Unique stock keeping unit',
+      },
+    },
+
+    {
+      name: 'stock',
+      type: 'number',
+      required: false,
+      min: 0,
+      defaultValue: 0,
+      admin: {
+        description: 'Stock quantity for main product (when no variants)',
+      },
+    },
+
+    /* VISIBILITY */
+
+    {
+      name: 'isActive',
+      type: 'checkbox',
+      defaultValue: true,
+    },
+
+    /* SELLER & STATUS */
+
+    {
+      name: 'seller',
+      type: 'relationship',
+      relationTo: 'users',
+      required: true,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'draft',
+      access: {
+        update: ({ req }) => (req.user as any)?.role === 'admin',
+      },
+      options: [
+        { label: 'Draft', value: 'draft' },
+        { label: 'Pending Approval', value: 'pending' },
+        { label: 'Live', value: 'live' },
+        { label: 'Rejected', value: 'rejected' },
+      ],
+      admin: {
+        position: 'sidebar',
+      },
+    },
+
+    /* RELATIONS */
+
+    {
+      name: 'category',
+      type: 'relationship',
+      relationTo: 'categories' as CollectionSlug,
+      required: true,
+    },
+
+    {
+      name: 'media',
+      type: 'relationship',
+      relationTo: 'media',
+      hasMany: true,
+    },
+
+    /* VARIANTS (OPTIONAL) */
+
+    {
+      name: 'variants',
+      type: 'array',
+      required: false,
+      minRows: 0,
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+          required: false,
+        },
+        {
+          name: 'sku',
+          type: 'text',
+          required: false,
+        },
+        {
+          name: 'price',
+          type: 'number',
+          required: false,
+          min: 0,
+        },
+        {
+          name: 'stock',
+          type: 'number',
+          required: false,
+          min: 0,
+        },
+        {
+          name: 'image',
+          type: 'relationship',
+          relationTo: 'media',
+        },
+        {
+          name: 'attributes',
+          type: 'array',
+          fields: [
+            { name: 'name', type: 'text', required: true },
+            { name: 'value', type: 'text', required: true },
+          ],
+        },
+      ],
+    },
+
+    /* ATTRIBUTES */
+
+    {
+      name: 'attributes',
+      type: 'array',
+      fields: [
+        { name: 'label', type: 'text', required: true },
+        { name: 'value', type: 'text', required: true },
+      ],
+    },
+
+    /* REFUND POLICY */
+
+    {
+      name: 'refundPolicy',
+      type: 'select',
+      options: [
+        '14-Days',
+        '7-Days',
+        '5-Days',
+        'Contact Customer Care',
+      ],
+    },
+
+    /* SEO */
+
+    {
+      name: 'seo',
+      type: 'group',
+      fields: [
+        { name: 'title', type: 'text' },
+        { name: 'description', type: 'textarea' },
+      ],
+    },
+  ],
+}
