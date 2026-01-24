@@ -6,10 +6,11 @@ export function loadCart(): CartClient {
   try {
     const raw = localStorage.getItem(CART_KEY)
     console.log("🛒 Loading cart from localStorage:", raw);
-    let cart = raw ? JSON.parse(raw) : { items: [] }
+    const cart = raw ? JSON.parse(raw) : { items: [] }
     
     // 🛡️ MIGRATION: Handle legacy schema where 'product' object was stored instead of 'productId'
     if (cart.items && Array.isArray(cart.items)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       cart.items = cart.items.map((item: any) => {
         if (!item.productId && item.product && item.product.id) {
           console.log("🛒 Migrating legacy cart item:", item.product.id);
