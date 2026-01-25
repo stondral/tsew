@@ -47,6 +47,7 @@ export async function calculateCartTotals(
     const product = await payload.findByID({
       collection: "products",
       id: item.productId,
+      depth: 2, // Ensure media and variants.image are populated
     });
 
     if (!product || product.status !== "live" || !product.isActive) {
@@ -61,14 +62,17 @@ export async function calculateCartTotals(
     let image = ""; 
     let variant = null;
 
-    // Get product image as fallback
-    if (product.media && product.media.length > 0) {
+    // 1. Try to get product-level media
+    if (product.media && Array.isArray(product.media) && product.media.length > 0) {
       const firstMedia = product.media[0];
-      image = typeof firstMedia === 'string' ? '' : firstMedia.url || '';
+      if (typeof firstMedia === 'object') {
+        // Try thumbnail size first, then main URL
+        image = firstMedia.sizes?.thumbnail?.url || firstMedia.url || '';
+      }
     }
 
     if (item.variantId) {
-      const variants = product.variants || product.productVariants;
+      const variants = product.variants || [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       variant = variants?.find((v: any) => v.id === item.variantId);
       if (!variant) {
@@ -79,9 +83,9 @@ export async function calculateCartTotals(
       price = variant.price;
       stock = variant.stock;
       
-      // If variant has specific image, use it
-      if (variant.image) {
-        image = typeof variant.image === 'string' ? '' : variant.image.url || image;
+      // 2. If variant has specific image, use it (and try thumbnail size)
+      if (variant.image && typeof variant.image === 'object') {
+        image = variant.image.sizes?.thumbnail?.url || variant.image.url || image;
       }
     }
 

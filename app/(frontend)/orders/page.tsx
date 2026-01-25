@@ -6,6 +6,8 @@ import { Package, ChevronRight, Calendar, Loader2, ArrowLeft } from "lucide-reac
 import { useAuth } from "@/components/auth/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { resolveMediaUrl } from "@/lib/utils";
+import Image from "next/image";
 
 export default function MyOrdersPage() {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -98,10 +100,20 @@ export default function MyOrdersPage() {
                   <div className="flex flex-col md:flex-row md:items-center gap-6">
                     {/* Items Preview */}
                     <div className="flex -space-x-3">
-                         {/* We could show small thumbnails if we had them in the list */}
-                         <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center border-2 border-white shadow-sm">
-                            <Package className="w-6 h-6 text-orange-600" />
-                         </div>
+                         {order.items?.[0]?.productImage ? (
+                           <div className="w-14 h-14 rounded-xl border-2 border-white shadow-sm overflow-hidden flex-shrink-0 relative">
+                             <Image 
+                               src={resolveMediaUrl(order.items[0].productImage)} 
+                               alt={order.items[0].productName} 
+                               fill
+                               className="object-cover" 
+                             />
+                           </div>
+                         ) : (
+                           <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center border-2 border-white shadow-sm">
+                             <Package className="w-6 h-6 text-orange-600" />
+                           </div>
+                         )}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -133,8 +145,8 @@ export default function MyOrdersPage() {
                             <Badge variant="outline" className={cn("rounded-md", order.paymentStatus === 'paid' ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200")}>
                                 {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                             </Badge>
-                            <Badge variant="outline" className="rounded-md border-orange-200 text-orange-700 bg-orange-50 font-semibold">
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            <Badge variant="outline" className="rounded-md border-orange-200 text-orange-700 bg-orange-50 font-semibold uppercase tracking-wider text-[10px]">
+                                {order.status}
                             </Badge>
                           </div>
                       </div>

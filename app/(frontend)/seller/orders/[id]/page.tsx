@@ -1,8 +1,6 @@
 import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
-import { Sidebar } from "@/components/seller/Sidebar";
-import { TopNav } from "@/components/seller/TopNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -101,12 +99,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
   );
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
-      <Sidebar user={user} className="hidden lg:block shadow-2xl z-50" />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopNav user={user} />
-        <main className="flex-1 p-10 overflow-y-auto">
-          <div className="max-w-[1200px] mx-auto space-y-8">
+    <div className="max-w-[1200px] mx-auto space-y-8">
             <div className="flex items-center gap-6 mb-8">
               <Link href="/seller/orders">
                 <Button variant="ghost" size="icon" className="rounded-2xl h-14 w-14 bg-white shadow-xl ring-1 ring-slate-100 hover:bg-slate-50 transition-all">
@@ -342,8 +335,5 @@ export default async function OrderDetailPage({ params }: PageProps) {
               </div>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
   );
 }

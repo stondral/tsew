@@ -64,7 +64,6 @@ export async function verifyPayment(data: VerifyPaymentInput) {
       id: data.orderId,
       data: {
         paymentStatus: "paid",
-        status: "processing",
         razorpayPaymentId: data.razorpayPaymentId,
         razorpaySignature: data.razorpaySignature,
       },

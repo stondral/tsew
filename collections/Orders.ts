@@ -5,29 +5,31 @@ export const Orders: CollectionConfig = {
 
   access: {
     read: ({ req }) => {
-      if (!req.user) return false
-
+      if (!req.user) return false;
       const user = req.user as any;
-
-      // Admin and Sellers can read orders (filtering happens on frontend for now to support legacy orders)
-      if (user.role === "admin" || user.role === "seller") return true
-
-      // User sees only their orders
+      if (user.role === "admin") return true;
+      if (user.role === "seller") {
+        return {
+          seller: { equals: user.id },
+        } as any;
+      }
       return {
-        user: {
-          equals: user.id,
-        },
-      } as any
+        user: { equals: user.id },
+      } as any;
     },
 
     create: ({ req }) => Boolean(req.user),
 
-    // Sellers can update order item status, but only for their own items
-    // (Logic for per-item restriction is best handled in hooks or custom access, 
-    // but the overall update permission is set here)
     update: ({ req }) => {
-      const role = (req.user as any)?.role;
-      return role === "admin" || role === "seller";
+      if (!req.user) return false;
+      const user = req.user as any;
+      if (user.role === "admin") return true;
+      if (user.role === "seller") {
+        return {
+          seller: { equals: user.id },
+        } as any;
+      }
+      return false;
     },
 
     delete: ({ req }) => (req.user as any)?.role === "admin",
@@ -66,11 +68,16 @@ export const Orders: CollectionConfig = {
       defaultValue: "PENDING",
       options: [
         { label: "Pending", value: "PENDING" },
+        { label: "Pending", value: "pending" },
         { label: "Accepted", value: "ACCEPTED" },
         { label: "Processing", value: "PROCESSING" },
+        { label: "Processing", value: "processing" },
         { label: "Shipped", value: "SHIPPED" },
+        { label: "Shipped", value: "shipped" },
         { label: "Delivered", value: "DELIVERED" },
+        { label: "Delivered", value: "delivered" },
         { label: "Cancelled", value: "CANCELLED" },
+        { label: "Cancelled", value: "cancelled" },
       ],
     },
 
@@ -100,6 +107,7 @@ export const Orders: CollectionConfig = {
       fields: [
         { name: "productId", type: "text", required: true },
         { name: "productName", type: "text", required: true },
+        { name: "productImage", type: "text" },
         { name: "variantId", type: "text" },
         { name: "priceAtPurchase", type: "number", required: true },
         { name: "quantity", type: "number", required: true, min: 1 },
@@ -114,15 +122,20 @@ export const Orders: CollectionConfig = {
           name: "status",
           type: "select",
           defaultValue: "PENDING",
-          options: [
-            { label: "Pending", value: "PENDING" },
-            { label: "Accepted", value: "ACCEPTED" },
-            { label: "Processing", value: "PROCESSING" },
-            { label: "Shipped", value: "SHIPPED" },
-            { label: "Delivered", value: "DELIVERED" },
-            { label: "Cancelled", value: "CANCELLED" },
-          ],
-        },
+      options: [
+        { label: "Pending", value: "PENDING" },
+        { label: "Pending", value: "pending" },
+        { label: "Accepted", value: "ACCEPTED" },
+        { label: "Processing", value: "PROCESSING" },
+        { label: "Processing", value: "processing" },
+        { label: "Shipped", value: "SHIPPED" },
+        { label: "Shipped", value: "shipped" },
+        { label: "Delivered", value: "DELIVERED" },
+        { label: "Delivered", value: "delivered" },
+        { label: "Cancelled", value: "CANCELLED" },
+        { label: "Cancelled", value: "cancelled" },
+      ],
+    },
       ],
     },
 
@@ -137,7 +150,7 @@ export const Orders: CollectionConfig = {
       defaultValue: 0,
     },
     {
-      name: "tax",
+      name: "gst",
       type: "number",
       defaultValue: 0,
     },
@@ -177,6 +190,8 @@ export const Orders: CollectionConfig = {
     {
       name: "razorpayOrderId",
       type: "text",
+      unique: true,
+      index: true,
     },
     {
       name: "razorpayPaymentId",
@@ -225,7 +240,7 @@ export const Orders: CollectionConfig = {
           data.total =
             data.subtotal +
             (data.shippingCost || 0) +
-            (data.tax || 0) +
+            (data.gst || 0) +
             (data.platformFee || 0)
         }
 
@@ -235,15 +250,15 @@ export const Orders: CollectionConfig = {
     afterChange: [
       async ({ doc, previousDoc, operation, req }) => {
         // 1. Determine if stock should be reduced
-        // Condition A: New COD order
-        const isNewCOD = operation === 'create' && doc.paymentMethod === 'cod';
+        // Condition A: New COD order or New PAID order (Created after verified payment)
+        const isNewSuccess = operation === 'create' && (doc.paymentMethod === 'cod' || doc.paymentStatus === 'paid');
         
-        // Condition B: Payment transitioned to 'paid' (Razorpay flow)
+        // Condition B: Payment transitioned to 'paid' (Webhook/Background flow)
         const isPaidNow = operation === 'update' && 
                           doc.paymentStatus === 'paid' && 
                           previousDoc?.paymentStatus === 'pending';
 
-        if (isNewCOD || isPaidNow) {
+        if (isNewSuccess || isPaidNow) {
           const { payload } = req;
           
           for (const item of doc.items) {

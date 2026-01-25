@@ -69,11 +69,12 @@ export async function createCheckout(intent: CheckoutIntent) {
   const orderItems = calculation.items.map(item => ({
     productId: item.productId,
     productName: item.name,
+    productImage: item.image,
     variantId: item.variantId || undefined,
     priceAtPurchase: item.price,
     quantity: item.quantity,
     seller: item.sellerId,
-    status: "pending" as const,
+    status: "PENDING" as const,
   }));
 
   try {
@@ -92,7 +93,7 @@ export async function createCheckout(intent: CheckoutIntent) {
           status: "PENDING",
           subtotal: calculation.subtotal,
           shippingCost: calculation.shipping,
-          tax: calculation.tax,
+          gst: calculation.tax,
           platformFee: calculation.platformFee,
           total: calculation.total,
         },

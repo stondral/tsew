@@ -33,6 +33,11 @@ const sidebarLinks = [
     href: "/seller/dashboard",
   },
   {
+    title: "Incoming Orders",
+    icon: Zap, // Using Zap for "incoming/urgent" 느낌
+    href: "/seller/orders/incoming",
+  },
+  {
     title: "Products",
     icon: ShoppingBag,
     href: "/seller/products",
@@ -45,10 +50,6 @@ const sidebarLinks = [
     title: "Orders",
     icon: CreditCard,
     href: "/seller/orders",
-    children: [
-      { title: "Incoming Orders", href: "/seller/orders/incoming" },
-      { title: "Order History", href: "/seller/orders" },
-    ],
   },
   {
     title: "Analytics",

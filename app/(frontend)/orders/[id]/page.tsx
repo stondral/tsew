@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { resolveMediaUrl } from "@/lib/utils";
+import Image from "next/image";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -40,10 +42,34 @@ export default async function OrderDetailsPage({ params }: PageProps) {
   const order = await (payload as any).findByID({
     collection: "orders",
     id,
+    depth: 1,
   });
 
   if (!order || (typeof order.user === 'string' ? order.user : order.user.id) !== user.id) {
     notFound();
+  }
+
+  // Backfill images if missing
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (order.items.some((item: any) => !item.productImage)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await Promise.all(order.items.map(async (item: any) => {
+      if (item.productImage) return;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const product = await (payload as any).findByID({
+          collection: "products",
+          id: item.productId,
+          depth: 1,
+        });
+        if (product?.media?.[0]) {
+          const media = product.media[0];
+          item.productImage = typeof media === "object" ? (media.sizes?.thumbnail?.url || media.url || "") : "";
+        }
+      } catch (e) {
+        console.error("Backfill error", e);
+      }
+    }));
   }
 
   // Fetch address details (since it's a relationship)
@@ -56,9 +82,10 @@ export default async function OrderDetailsPage({ params }: PageProps) {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "delivered": return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-      case "pending": return <Clock className="w-5 h-5 text-amber-500" />;
-      case "shipped": return <Truck className="w-5 h-5 text-blue-500" />;
+      case "DELIVERED": return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+      case "PENDING": return <Clock className="w-5 h-5 text-amber-500" />;
+      case "SHIPPED": return <Truck className="w-5 h-5 text-blue-500" />;
+      case "ACCEPTED": return <CheckCircle2 className="w-5 h-5 text-amber-500" />;
       default: return <Package className="w-5 h-5 text-gray-500" />;
     }
   };
@@ -114,10 +141,10 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                              <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Status</p>
-                             <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2">
                                 {getStatusIcon(order.status)}
-                                <span className="font-bold text-gray-800 capitalize">{order.status}</span>
-                             </div>
+                                <span className="font-bold text-gray-800 uppercase tracking-wider text-xs">{order.status}</span>
+                              </div>
                         </div>
                         <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                              <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Payment</p>
@@ -145,9 +172,17 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {order.items.map((item: any, idx: number) => (
                         <div key={idx} className="p-4 md:p-6 flex flex-col xs:flex-row items-start xs:items-center gap-4 md:gap-6 hover:bg-gray-50/30 transition-colors">
-                            <div className="w-14 h-14 xs:w-16 xs:h-16 md:w-20 md:h-20 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-orange-100 overflow-hidden">
-                                 {/* Fallback to package icon if no image logic here */}
-                                 <Package className="w-8 h-8 text-orange-200" />
+                            <div className="w-14 h-14 xs:w-16 xs:h-16 md:w-20 md:h-20 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-orange-100 overflow-hidden relative">
+                                 {item.productImage ? (
+                                   <Image 
+                                     src={resolveMediaUrl(item.productImage)} 
+                                     alt={item.productName} 
+                                     fill
+                                     className="object-cover" 
+                                   />
+                                 ) : (
+                                   <Package className="w-8 h-8 text-orange-200" />
+                                 )}
                             </div>
                             <div className="flex-1 min-w-0 w-full xs:w-auto">
                                 <h4 className="font-bold text-gray-900 mb-1 truncate">{item.productName}</h4>
@@ -208,7 +243,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                     </div>
                     <div className="flex justify-between text-gray-400">
                         <span>Tax (18% GST)</span>
-                        <span className="text-gray-200">₹{order.tax.toLocaleString("en-IN")}</span>
+                        <span className="text-gray-200">₹{order.gst.toLocaleString("en-IN")}</span>
                     </div>
                     {order.platformFee > 0 && (
                         <div className="flex justify-between text-gray-400">

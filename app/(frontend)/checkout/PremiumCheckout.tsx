@@ -19,7 +19,8 @@ import {
 import { useCart } from "@/components/cart/CartContext";
 import { createCheckout } from "./actions/createCheckout";
 import { calculateCheckoutTotals } from "./actions/calculateCheckoutTotals";
-import { createRazorpayOrderForCheckout } from "./actions/CreateRazorpayOrder";
+import { createRazorpayIntent } from "./actions/createRazorpayIntent";
+import { finaliseRazorpayCheckout } from "./actions/finaliseRazorpayCheckout";
 import { createAddress } from "./actions/createAddress";
 import { CalculationResult } from "@/lib/cart/calculations";
 
@@ -31,6 +32,8 @@ interface Address {
   state: string;
   pincode: string;
   address: string;
+  email?: string;
+  phone?: string;
 }
 
 interface CartItemWithProduct {
@@ -49,7 +52,7 @@ interface Props {
 
 export default function PremiumCheckout({
   addresses,
-  userId,
+  userId: _userId,
   cartItems,
 }: Props) {
   const router = useRouter();
@@ -96,8 +99,7 @@ export default function PremiumCheckout({
     async function fetchTotals() {
       setCalculating(true);
       const res = await calculateCheckoutTotals(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        items.map((i: any) => ({
+        items.map((i) => ({
           productId: i.productId,
           variantId: i.variantId,
           quantity: i.quantity,
@@ -144,9 +146,9 @@ export default function PremiumCheckout({
     setError(null);
 
     try {
-      let addressId = selectedAddressId;
+      let finalAddressId = selectedAddressId;
 
-      // If new address is being used, create it first
+      // 1. Create address if new
       if (showNewAddress) {
         const addressRes = await createAddress({
           ...formData,
@@ -158,31 +160,20 @@ export default function PremiumCheckout({
           setLoading(false);
           return;
         }
-        addressId = addressRes.addressId;
+        finalAddressId = addressRes.addressId;
       }
 
-      const res = await createCheckout({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        items: items.map((i: any) => ({
-          productId: i.productId,
-          variantId: i.variantId || undefined,
-          quantity: i.quantity,
-        })),
-        addressId: addressId!,
-        paymentMethod,
-        guestEmail: formData.email,
-        guestPhone: formData.phone,
-      });
+      const checkoutItems = items.map((i) => ({
+        productId: i.productId,
+        variantId: i.variantId || undefined,
+        quantity: i.quantity,
+      }));
 
-      if (!res.ok) {
-        setError(res.error || "Checkout failed");
-        setLoading(false);
-        return;
-      }
-
+      // 2. Handle Razorpay (Order creation AFTER payment)
       if (paymentMethod === "razorpay") {
-        const razorpayRes = await createRazorpayOrderForCheckout(res.orderId!);
-        if (razorpayRes.ok && razorpayRes.razorpay) {
+        const intentRes = await createRazorpayIntent(checkoutItems);
+        
+        if (intentRes.ok && intentRes.razorpay) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           if (typeof (window as any).Razorpay === "undefined") {
              setError("Razorpay SDK not loaded. Please refresh.");
@@ -191,52 +182,74 @@ export default function PremiumCheckout({
           }
 
           const options = {
-            key: razorpayRes.razorpay.key,
-            amount: razorpayRes.razorpay.amount, // Already in paise from lib
-            currency: razorpayRes.razorpay.currency,
+            key: intentRes.razorpay.key,
+            amount: intentRes.razorpay.amount,
+            currency: intentRes.razorpay.currency,
             name: "Stond Emporium",
-            description: `Order #${res.orderId}`,
-            image: totals.items[0]?.image || "", 
-            order_id: razorpayRes.razorpay.orderId,
+            description: "Checkout Payment",
+            image: intentRes.items?.[0]?.image || "", 
+            order_id: intentRes.razorpay.orderId,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handler: function (response: any) {
-              // On success, redirect to success page
-              // Verification happens via webhook in handleRazorpayPayment.ts
-              // FALLBACK: pass all params for immediate client-side trigger verification
-              const params = new URLSearchParams({
-                orderId: res.orderId!,
-                paymentId: response.razorpay_payment_id,
-                razorpayOrderId: response.razorpay_order_id,
-                signature: response.razorpay_signature,
+            handler: async function (response: any) {
+              setLoading(true);
+              // Finalise: Verify and Create Order
+              const finalRes = await finaliseRazorpayCheckout({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                items: checkoutItems,
+                addressId: finalAddressId!,
+                guestEmail: formData.email,
+                guestPhone: formData.phone,
               });
-              router.push(`/order-success?${params.toString()}`);
+
+              if (finalRes.ok && finalRes.orderId) {
+                router.push(`/order-success?orderId=${finalRes.orderId}`);
+              } else {
+                setError(finalRes.error || "Payment successful but order creation failed. Contact support.");
+                setLoading(false);
+              }
             },
             prefill: {
-              name: showNewAddress ? `${formData.firstName} ${formData.lastName}` : (addresses.find((a) => a.id === selectedAddressId)?.firstName + " " + addresses.find((a) => a.id === selectedAddressId)?.lastName),
+              name: showNewAddress ? `${formData.firstName} ${formData.lastName}` : "Customer",
               email: formData.email || "",
               contact: formData.phone || "",
             },
-            notes: {
-                order_id: res.orderId,
-                user_id: userId
-            },
-            theme: {
-              color: "#f97316",
-            },
+            theme: { color: "#f97316" },
           };
           
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const rzp = new (window as any).Razorpay(options);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          rzp.on('payment.failed', function (response: any) {
+            setError(`Payment Failed: ${response.error.description}`);
+            setLoading(false);
+          });
           rzp.open();
         } else {
-          setError(razorpayRes.error || "Razorpay init failed");
+          setError(intentRes.error || "Razorpay init failed");
           setLoading(false);
         }
-      } else {
-        router.push(`/order-success?orderId=${res.orderId}`);
+      } 
+      // 3. Handle COD (Immediate creation)
+      else {
+        const res = await createCheckout({
+          items: checkoutItems,
+          addressId: finalAddressId!,
+          paymentMethod: "cod",
+          guestEmail: formData.email,
+          guestPhone: formData.phone,
+        });
+
+        if (res.ok && res.orderId) {
+          router.push(`/order-success?orderId=${res.orderId}`);
+        } else {
+          setError(res.error || "Checkout failed");
+          setLoading(false);
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
       setLoading(false);
     }
   };

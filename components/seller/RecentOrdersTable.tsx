@@ -89,14 +89,14 @@ export function RecentOrdersTable({ orders }: RecentOrdersTableProps) {
                              ₹{order.totalAmount}
                         </TableCell>
                         <TableCell className="text-center">
-                        <Badge className={cn(
-                             "border-none font-black text-[10px] px-3 py-1 rounded-lg uppercase tracking-wider",
-                             order.status === 'success' ? 'bg-emerald-50 text-emerald-600' : 
-                             order.status === 'pending' ? 'bg-amber-50 text-amber-600' : 
-                             'bg-slate-100 text-slate-500'
-                        )}>
-                            {order.status}
-                        </Badge>
+                         <Badge className={cn(
+                              "border-none font-black text-[10px] px-3 py-1 rounded-lg uppercase tracking-wider",
+                              (order.status === 'success' || order.status === 'ACCEPTED' || order.status === 'SHIPPED' || order.status === 'DELIVERED') ? 'bg-emerald-50 text-emerald-600' : 
+                              (order.status === 'pending' || order.status === 'PENDING') ? 'bg-amber-50 text-amber-600' : 
+                              'bg-slate-100 text-slate-500'
+                         )}>
+                             {order.status}
+                         </Badge>
                         </TableCell>
                         <TableCell className="pr-8 text-right">
                         <Link href={`/seller/orders/${order.id}`}>
