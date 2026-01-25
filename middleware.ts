@@ -1,0 +1,88 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export async function middleware(req: NextRequest) {
+  const hostname = req.headers.get('host') || ''
+  const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'stondemporium.tech'
+  const isLocalhost = hostname.includes('localhost')
+
+  // Skip static files and API routes
+  const path = req.nextUrl.pathname
+  if (
+    path.startsWith('/_next') || 
+    path.startsWith('/api') || 
+    path.includes('.') ||
+    path === '/favicon.ico'
+  ) {
+    return NextResponse.next()
+  }
+
+  // 1. Is it platform domain?
+  const isPlatform = 
+    hostname === mainDomain || 
+    hostname === `www.${mainDomain}` || 
+    (isLocalhost && !hostname.includes('.')) ||
+    hostname === 'localhost:3000'
+
+  if (isPlatform) {
+    return NextResponse.next()
+  }
+
+  // 2. Resolve Seller Identity
+  let query = ''
+  
+  if (hostname.endsWith(`.${mainDomain}`)) {
+    const subdomain = hostname.replace(`.${mainDomain}`, '')
+    query = `where[username][equals]=${subdomain}`
+  } else if (isLocalhost && hostname.split('.').length > 1) {
+    // Handle seller1.localhost:3000
+    const subdomain = hostname.split('.')[0]
+    query = `where[username][equals]=${subdomain}`
+  } else {
+    // Custom domain
+    query = `where[customDomain.domain][equals]=${hostname}&where[customDomain.enabled][equals]=true`
+  }
+
+  if (query) {
+    try {
+      const payloadUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || 'http://localhost:3000'
+      const apiUrl = `${payloadUrl}/api/users?where[role][equals]=seller&${query}`
+      
+      const response = await fetch(apiUrl, { next: { revalidate: 3600 } }) // Cache for 1 hour
+      const data = await response.json()
+
+      if (data.docs && data.docs.length > 0) {
+        const seller = data.docs[0]
+        
+        // Clone headers and set seller context
+        const requestHeaders = new Headers(req.headers)
+        requestHeaders.set('x-seller-id', seller.id)
+        requestHeaders.set('x-seller-plan', seller.plan)
+        requestHeaders.set('x-seller-username', seller.username)
+
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        })
+      }
+    } catch (error) {
+      console.error('Middleware seller resolution failed:', error)
+    }
+  }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+}

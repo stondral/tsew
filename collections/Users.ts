@@ -110,6 +110,24 @@ export const Users: CollectionConfig = {
     delete: ({ req }) => (req.user as any)?.role === "admin",
   },
 
+  hooks: {
+    beforeChange: [
+      ({ data }) => {
+        if (data.plan === "starter") {
+          data.theme = {
+            ...(data.theme || {}),
+            preset: "default",
+          }
+          data.customDomain = {
+            ...(data.customDomain || {}),
+            enabled: false,
+          }
+        }
+        return data
+      },
+    ],
+  },
+
   fields: [
     {
       name: "username",
@@ -198,6 +216,55 @@ export const Users: CollectionConfig = {
       admin: {
         position: 'sidebar',
       }
+    },
+    {
+      name: "theme",
+      type: "group",
+      fields: [
+        {
+          name: "preset",
+          type: "select",
+          defaultValue: "default",
+          options: [
+            { label: "Default", value: "default" },
+            { label: "Modern", value: "modern" },
+            { label: "Luxury", value: "luxury" },
+          ],
+        },
+        {
+          name: "colors",
+          type: "json",
+        },
+        {
+          name: "fonts",
+          type: "json",
+        },
+        {
+          name: "layoutVersion",
+          type: "number",
+          defaultValue: 1,
+        },
+      ],
+    },
+    {
+      name: "customDomain",
+      type: "group",
+      fields: [
+        {
+          name: "enabled",
+          type: "checkbox",
+          defaultValue: false,
+        },
+        {
+          name: "domain",
+          type: "text",
+          unique: true,
+        },
+        {
+          name: "verifiedAt",
+          type: "date",
+        },
+      ],
     },
     // ❌ Removed: emailVerified, emailVerifyToken, emailVerifyExpires
     // Payload handles these internally now.

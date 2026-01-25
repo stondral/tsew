@@ -51,6 +51,7 @@ export interface Product {
   seller?: {
     id: string;
     name: string;
+    username?: string;
     email?: string;
   };
 }

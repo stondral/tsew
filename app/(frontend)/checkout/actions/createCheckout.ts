@@ -82,13 +82,14 @@ export async function createCheckout(intent: CheckoutIntent) {
         collection: "orders",
         data: {
           user: user.id,
+          seller: orderItems[0]?.seller, // Set root seller from first item
           items: orderItems,
           shippingAddress: address.id, 
           guestEmail: orderGuestEmail,
           guestPhone: orderGuestPhone,
           paymentMethod: intent.paymentMethod,
           paymentStatus: "pending",
-          status: "pending",
+          status: "PENDING",
           subtotal: calculation.subtotal,
           shippingCost: calculation.shipping,
           tax: calculation.tax,

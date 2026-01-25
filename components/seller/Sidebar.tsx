@@ -45,6 +45,10 @@ const sidebarLinks = [
     title: "Orders",
     icon: CreditCard,
     href: "/seller/orders",
+    children: [
+      { title: "Incoming Orders", href: "/seller/orders/incoming" },
+      { title: "Order History", href: "/seller/orders" },
+    ],
   },
   {
     title: "Analytics",

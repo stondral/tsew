@@ -88,6 +88,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       ? {
           id: typeof p.seller === "object" ? p.seller.id : p.seller,
           name: typeof p.seller === "object" ? (p.seller.username || p.seller.email) : undefined,
+          username: typeof p.seller === "object" ? p.seller.username : undefined,
           email: typeof p.seller === "object" ? p.seller.email : undefined,
         }
       : undefined,

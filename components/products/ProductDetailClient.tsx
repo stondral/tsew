@@ -310,8 +310,14 @@ export default function ProductDetailClient({
                     Official Store Partner
                   </span>
                 </div>
-                <Button variant="outline" size="sm" className="rounded-full">
-                  Visit Store
+                <Button variant="outline" size="sm" className="rounded-full" asChild>
+                  <Link 
+                    href={`http://${product.seller.username}.stondemporium.tech`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Visit Store
+                  </Link>
                 </Button>
               </div>
             )}
