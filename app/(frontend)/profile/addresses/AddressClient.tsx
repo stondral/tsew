@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Plus,
-  MapPin,
+import { Plus,MapPin,
   Home,
   Briefcase,
   Trash2,

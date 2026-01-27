@@ -17,6 +17,13 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+export const metadata = {
+  icons: {
+    icon: '/icon.jpg',
+    apple: '/icon.jpg',
+  },
+};
+
 import Script from "next/script";
 
 const Layout = ({ children }: LayoutProps) => {

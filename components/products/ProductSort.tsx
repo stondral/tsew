@@ -30,10 +30,26 @@ export default function ProductSort({ currentSort }: Props) {
   return (
     <div className="flex items-center gap-4">
       <div className="hidden sm:flex items-center bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm">
-        <button className="p-2.5 bg-gray-50 text-gray-900 rounded-xl">
+        <button 
+          onClick={() => router.push(`/products?${createQueryString("view", "grid")}`)}
+          className={`p-2.5 rounded-xl transition-all ${
+            (!searchParams.get("view") || searchParams.get("view") === "grid") 
+              ? "bg-orange-50 text-orange-600 shadow-sm" 
+              : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+          }`}
+          title="Grid View"
+        >
           <LayoutGrid className="w-5 h-5" />
         </button>
-        <button className="p-2.5 text-gray-400 hover:text-gray-600 rounded-xl transition-colors">
+        <button 
+          onClick={() => router.push(`/products?${createQueryString("view", "list")}`)}
+          className={`p-2.5 rounded-xl transition-all ${
+            searchParams.get("view") === "list" 
+              ? "bg-orange-50 text-orange-600 shadow-sm" 
+              : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+          }`}
+          title="List View"
+        >
           <List className="w-5 h-5" />
         </button>
       </div>

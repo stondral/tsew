@@ -14,11 +14,12 @@ interface PageProps {
     minPrice?: string;
     maxPrice?: string;
     sort?: string;
+    view?: "grid" | "list";
   }>;
 }
 
 export default async function ProductsPage({ searchParams }: PageProps) {
-  const { q, category, minPrice, maxPrice, sort } = await searchParams;
+  const { q, category, minPrice, maxPrice, sort, view } = await searchParams;
   const payload = await getPayload({ config });
 
   // 1. Fetch categories for filters
@@ -107,8 +108,18 @@ export default async function ProductsPage({ searchParams }: PageProps) {
   return (
     <div className="min-h-screen bg-[#F8F9FA] py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-10">
+          <div className="flex items-start gap-4">
+            <Link 
+              href="/" 
+              className="mt-1 p-2 bg-white rounded-xl border border-gray-200 text-gray-400 hover:text-orange-600 hover:border-orange-200 transition-all shadow-sm"
+              title="Back to Home"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
             <h1 className="text-4xl font-black text-gray-900 tracking-tight">
               {q ? (
                 <>
@@ -121,6 +132,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
             <p className="text-gray-500 mt-3 font-medium">
               Found {products.length} {products.length === 1 ? "masterpiece" : "products"} for you
             </p>
+            </div>
           </div>
           
           <ProductSort currentSort={sort || "newest"} />
@@ -161,7 +173,7 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                 </Link>
               </div>
             ) : (
-              <ProductsGrid products={products} />
+              <ProductsGrid products={products} view={view || "grid"} />
             )}
           </main>
         </div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Star,
   Heart,
@@ -71,8 +72,29 @@ export default function ProductDetailClient({
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [imageZoom, setImageZoom] = useState(false);
-  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Synchronize scroll on thumbnail click
+  useEffect(() => {
+    if (scrollRef.current) {
+      const container = scrollRef.current;
+      const targetScroll = selectedImageIndex * container.clientWidth;
+      if (Math.abs(container.scrollLeft - targetScroll) > 10) {
+        container.scrollTo({ left: targetScroll, behavior: "smooth" });
+      }
+    }
+  }, [selectedImageIndex]);
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const container = scrollRef.current;
+      const index = Math.round(container.scrollLeft / container.clientWidth);
+      if (index !== selectedImageIndex) {
+        setSelectedImageIndex(index);
+      }
+    }
+  };
 
   // Derived values
   const selectedVariant = useMemo(
@@ -102,20 +124,22 @@ export default function ProductDetailClient({
 
   const isOutOfStock = currentStock <= 0;
 
-  // Image zoom handler
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!imageZoom) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setZoomPosition({ x, y });
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Breadcrumbs & Back Button */}
       <div className="bg-white border-b pt-6">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-2 text-gray-500 hover:text-orange-600 border border-gray-100 rounded-lg px-3"
+            onClick={() => window.history.back()}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Back</span>
+          </Button>
+
           <nav className="flex items-center gap-2 text-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
             <Link
               href="/"
@@ -137,67 +161,48 @@ export default function ProductDetailClient({
               {product.name}
             </span>
           </nav>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="flex items-center gap-2 text-gray-500 hover:text-orange-600"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Back</span>
-          </Button>
         </div>
       </div>
 
-      {/* Floating Mobile Close Button */}
+      {/* Floating Mobile Back Button */}
       <Button
         variant="secondary"
         size="icon"
-        className="fixed top-6 right-6 z-[60] rounded-full w-12 h-12 bg-white/80 backdrop-blur-md shadow-2xl border border-gray-100 md:hidden hover:bg-white active:scale-90 transition-all group"
+        className="fixed top-6 left-6 z-[60] rounded-full w-12 h-12 bg-black/50 backdrop-blur-md shadow-2xl border border-white/20 md:hidden hover:bg-black/70 active:scale-90 transition-all group"
         onClick={() => window.history.back()}
       >
-        <X className="w-6 h-6 text-gray-900 group-hover:text-orange-600 transition-colors" />
+        <ArrowLeft className="w-6 h-6 text-white transition-colors" />
       </Button>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Column - Images */}
           <div className="space-y-4">
-            {/* Main Image with Zoom */}
-            <div
-              className={cn(
-                "relative aspect-square bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-lg cursor-zoom-in",
-                imageZoom && "cursor-zoom-out",
-              )}
-              onMouseEnter={() => setImageZoom(true)}
-              onMouseLeave={() => setImageZoom(false)}
-              onMouseMove={handleMouseMove}
-            >
-              {images[selectedImageIndex] ? (
-                <Image
-                  src={images[selectedImageIndex]}
-                  alt={product.name}
-                  fill
-                  className={cn(
-                    "object-cover transition-transform duration-300",
-                    imageZoom && "scale-150",
-                  )}
-                  style={
-                    imageZoom
-                      ? {
-                          transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
-                        }
-                      : undefined
-                  }
-                  unoptimized
-                  priority
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                  <Package className="w-20 h-20 text-gray-300" />
-                </div>
-              )}
+            {/* Main Image Carousel */}
+            <div className="relative aspect-[3/4] bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-lg group/main">
+              <div 
+                ref={scrollRef}
+                onScroll={handleScroll}
+                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide h-full"
+                style={{ scrollBehavior: "smooth" }}
+              >
+                {images.map((src, i) => (
+                  <div 
+                    key={`${src}-main-${i}`}
+                    className="relative min-w-full h-full snap-center cursor-zoom-in"
+                    onClick={() => setIsZoomOpen(true)}
+                  >
+                    <Image
+                      src={src}
+                      alt={`${product.name} ${i + 1}`}
+                      fill
+                      className="object-contain p-4"
+                      unoptimized
+                      priority={i === 0}
+                    />
+                  </div>
+                ))}
+              </div>
 
               {/* Badges */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -627,6 +632,60 @@ export default function ProductDetailClient({
           </Tabs>
         </div>
       </div>
+      <AnimatePresence>
+        {isZoomOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-black/98 backdrop-blur-2xl flex flex-col items-center justify-center p-4 md:p-8"
+          >
+            <button
+              onClick={() => setIsZoomOpen(false)}
+              className="absolute top-24 left-8 z-[10000] p-2.5 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-full text-white transition-all active:scale-95 flex items-center gap-2 border border-white/20 shadow-xl"
+              aria-label="Back to product"
+            >
+              <ArrowLeft className="w-6 h-6 text-white" />
+              <span className="text-xs font-bold pr-1 hidden sm:block tracking-wide">BACK</span>
+            </button>
+
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="relative w-full h-[70vh] md:h-[80vh] flex items-center justify-center"
+            >
+              <div 
+                className="relative w-full h-full max-w-5xl cursor-zoom-out"
+                onClick={() => setIsZoomOpen(false)}
+              >
+                <Image
+                  src={images[selectedImageIndex]}
+                  alt={product.name}
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            </motion.div>
+
+            <div className="mt-8 flex justify-center gap-3 px-4 overflow-x-auto scrollbar-hide w-full max-w-4xl pb-4">
+              {images.map((img, i) => (
+                <button
+                  key={`zoom-thumb-${i}`}
+                  onClick={() => setSelectedImageIndex(i)}
+                  className={cn(
+                    "relative w-16 h-16 md:w-24 md:h-24 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all duration-300",
+                    i === selectedImageIndex ? "border-orange-500 scale-110 shadow-lg shadow-orange-500/20" : "border-white/10 opacity-40 hover:opacity-100 hover:border-white/30"
+                  )}
+                >
+                  <Image src={img} alt="thumb" fill className="object-cover" unoptimized />
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
