@@ -5,6 +5,8 @@ import { getSellerFromHeaders, getSellerFullData, getCapabilities, resolveTheme 
 import StoreLayout from "@/components/storefront/StoreLayout";
 import StoreSections from "@/components/storefront/StoreSections";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const sellerContext = await getSellerFromHeaders();
 
