@@ -52,7 +52,6 @@ interface Props {
 
 export default function PremiumCheckout({
   addresses,
-  userId: _userId,
   cartItems,
 }: Props) {
   const router = useRouter();

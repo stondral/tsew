@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const payload = await getPayload({ config });
 
-    let where: Record<string, unknown> = {
+    const where: Record<string, unknown> = {
       status: { equals: 'live' },
       isActive: { equals: true },
     };
