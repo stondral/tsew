@@ -48,7 +48,19 @@ export async function middleware(req: NextRequest) {
       const payloadUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || 'http://localhost:3000'
       const apiUrl = `${payloadUrl}/api/users?where[role][equals]=seller&${query}`
       
-      const response = await fetch(apiUrl, { next: { revalidate: 3600 } }) // Cache for 1 hour
+      const response = await fetch(apiUrl, { next: { revalidate: 3600 } })
+      
+      if (!response.ok) {
+        console.error(`Middleware API fetch failed: ${response.status} ${response.statusText}`)
+        return NextResponse.next()
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Middleware API returned non-JSON response')
+        return NextResponse.next()
+      }
+
       const data = await response.json()
 
       if (data.docs && data.docs.length > 0) {

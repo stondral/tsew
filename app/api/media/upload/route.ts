@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
 import config from "@/payload.config";
+
+export const runtime = 'nodejs';
 import { headers } from "next/headers";
 
 export async function POST(request: NextRequest) {
