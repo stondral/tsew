@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AddressClient from "./AddressClient";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AddressesPage() {
   const payload = await getPayload({ config });
   const requestHeaders = await headers();

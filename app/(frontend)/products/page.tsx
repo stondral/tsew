@@ -7,6 +7,8 @@ import ProductFilters from "@/components/products/ProductFilters";
 import ProductSort from "@/components/products/ProductSort";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic';
+
 interface PageProps {
   searchParams: Promise<{ 
     q?: string;

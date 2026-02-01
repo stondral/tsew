@@ -2,6 +2,8 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 
+export const dynamic = 'force-dynamic';
+
 import { StatsCards } from "@/components/seller/StatsCards";
 import { RevenueChart } from "@/components/seller/RevenueChart";
 import { RecentOrdersTable } from "@/components/seller/RecentOrdersTable";

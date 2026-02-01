@@ -5,6 +5,8 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 
+export const dynamic = 'force-dynamic';
+
 export default async function CheckoutPage() {
   const payload = await getPayload({ config });
 

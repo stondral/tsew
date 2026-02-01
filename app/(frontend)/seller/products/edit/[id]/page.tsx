@@ -7,6 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 
+export const dynamic = 'force-dynamic';
+
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const payload = await getPayload({ config });

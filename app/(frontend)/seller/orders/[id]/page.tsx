@@ -23,6 +23,8 @@ import { redirect, notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
+export const dynamic = 'force-dynamic';
+
 interface User {
   id: string;
   role: 'admin' | 'seller' | 'user';

@@ -2,6 +2,8 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
+
+export const dynamic = 'force-dynamic';
 import { 
   Plus, 
   Search, 
