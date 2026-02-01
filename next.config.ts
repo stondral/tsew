@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
     ],
     unoptimized: true,
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'payload': 'commonjs payload',
+      });
+    }
+    return config;
+  },
 };
 
 export default withPayload(nextConfig);
