@@ -1,4 +1,4 @@
-import { mongooseAdapter } from "@payloadcms/db-mongodb";
+import { postgresAdapter } from "@payloadcms/db-postgres";
 import { nodemailerAdapter } from "@payloadcms/email-nodemailer";
 import { lexicalEditor } from "@payloadcms/richtext-lexical";
 import { s3Storage } from "@payloadcms/storage-s3";
@@ -44,8 +44,10 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, "payload-types.ts"),
   },
-  db: mongooseAdapter({
-    url: process.env.DATABASE_URL || "",
+  db: postgresAdapter({
+    pool: {
+      connectionString: process.env.DATABASE_URL || "",
+    },
   }),
   sharp,
   serverURL: process.env.NEXT_PUBLIC_PAYLOAD_URL || "http://localhost:3000",
