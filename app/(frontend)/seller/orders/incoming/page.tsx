@@ -5,6 +5,8 @@ import { getIncomingOrders } from "@/lib/orders"
 import IncomingOrdersClient from "./IncomingOrdersClient"
 import { redirect } from "next/navigation"
 
+export const dynamic = 'force-dynamic';
+
 export default async function IncomingOrdersPage() {
   const payload = await getPayload({ config })
   const requestHeaders = await headers()

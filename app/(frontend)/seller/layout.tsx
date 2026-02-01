@@ -6,6 +6,8 @@ import { TopNav } from "@/components/seller/TopNav";
 import Footer from "@/components/footer";
 import { redirect } from "next/navigation";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SellerLayout({
   children,
 }: {
