@@ -14,8 +14,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import loginImage from "@/assets/loginpage.png";
+import logoston from "@/components/logoston.png";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -35,6 +36,9 @@ export default function AuthPage() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPhone, setRegisterPhone] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
+  const [registerConfirmPassword, setRegisterConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
 
@@ -91,6 +95,12 @@ export default function AuthPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (registerPassword !== registerConfirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -185,8 +195,14 @@ export default function AuthPage() {
                   <CheckCircle2 className="w-8 h-8 text-white" />
                 </div>
               ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                  <span className="text-2xl font-bold text-white">S</span>
+                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-gray-100">
+                  <Image
+                    src={logoston}
+                    alt="Stond Logo"
+                    width={64}
+                    height={64}
+                    className="object-contain"
+                  />
                 </div>
               )}
             </div>
@@ -322,14 +338,27 @@ export default function AuthPage() {
                       <label className="text-sm font-medium text-gray-700">
                         Password
                       </label>
-                      <Input
-                        type="password"
-                        placeholder="Enter your password"
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        required
-                        className="h-11 border-gray-200 focus:border-orange-500 focus:ring-orange-500"
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter your password"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          required
+                          className="h-11 border-gray-200 focus:border-orange-500 focus:ring-orange-500 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {error && (
@@ -414,14 +443,54 @@ export default function AuthPage() {
                       <label className="text-sm font-medium text-gray-700">
                         Password
                       </label>
-                      <Input
-                        type="password"
-                        placeholder="Create a password"
-                        value={registerPassword}
-                        onChange={(e) => setRegisterPassword(e.target.value)}
-                        required
-                        className="h-11 border-gray-200 focus:border-orange-500 focus:ring-orange-500"
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Create a password"
+                          value={registerPassword}
+                          onChange={(e) => setRegisterPassword(e.target.value)}
+                          required
+                          className="h-11 border-gray-200 focus:border-orange-500 focus:ring-orange-500 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">
+                        Confirm Password
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm your password"
+                          value={registerConfirmPassword}
+                          onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                          required
+                          className="h-11 border-gray-200 focus:border-orange-500 focus:ring-orange-500 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                          ) : (
+                            <Eye className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {error && (
