@@ -14,6 +14,7 @@ import { Categories } from "./collections/Categories";
 import { Products } from "./collections/Products";
 import { Orders } from "./collections/Orders";
 import { Addresses } from "./collections/Addresses";
+import { Feedback } from "./collections/Feedback";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -25,7 +26,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Products, Orders, Addresses],
+  collections: [Users, Media, Categories, Products, Orders, Addresses, Feedback],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",
   email: nodemailerAdapter({
