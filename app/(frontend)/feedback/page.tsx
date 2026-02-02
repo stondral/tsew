@@ -79,7 +79,7 @@ export default function FeedbackPage() {
     setIsSubmitting(false)
   }
 
-  const updateField = (field: string, value: any) => {
+  const updateField = (field: keyof typeof formData, value: string | number | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -127,7 +127,7 @@ export default function FeedbackPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-white text-lg">Finally, what's your phone number?</Label>
+                <Label htmlFor="phone" className="text-white text-lg">Finally, what&apos;s your phone number?</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -437,7 +437,7 @@ export default function FeedbackPage() {
           >
             <CheckCircle2 className="h-10 w-10 text-white" />
           </motion.div>
-          <h2 className="text-3xl font-bold text-white mb-4">You're Awesome!</h2>
+          <h2 className="text-3xl font-bold text-white mb-4">You&apos;re Awesome!</h2>
           <p className="text-white/70 text-lg mb-8">
             Thank you for helping us shape the future of Stond Emporium. Your insights are incredibly valuable.
           </p>

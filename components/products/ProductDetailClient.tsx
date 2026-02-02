@@ -11,14 +11,12 @@ import {
   ShieldCheck,
   Truck,
   RotateCcw,
-  Package,
   Store,
   BadgeCheck,
   ChevronRight,
   Zap,
   Clock,
   ArrowLeft,
-  X,
 } from "lucide-react";
 
 import { Product } from "@/lib/models/domain/product";

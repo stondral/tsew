@@ -16,6 +16,7 @@ export async function submitFeedback(formData: {
   try {
     const payload = await getPayload({ config });
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (payload as any).create({
       collection: "feedback",
       data: {
