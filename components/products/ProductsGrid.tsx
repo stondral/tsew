@@ -18,8 +18,13 @@ export default function ProductsGrid({ products, limit, view = "grid" }: Props) 
 
   return (
     <div className={gridClasses}>
-      {list.map((product) => (
-        <ProductCard key={product.id} product={product} view={view} />
+      {list.map((product, index) => (
+        <ProductCard 
+          key={product.id} 
+          product={product} 
+          view={view} 
+          priority={index < 4}
+        />
       ))}
     </div>
   );

@@ -15,9 +15,10 @@ interface Props {
     featured?: boolean;
   };
   view?: "grid" | "list";
+  priority?: boolean;
 }
 
-export default function ProductCard({ product, view = "grid" }: Props) {
+export default function ProductCard({ product, view = "grid", priority = false }: Props) {
   const [wishlisted, setWishlisted] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     product.variants?.[0]?.id ?? null,
@@ -64,7 +65,8 @@ export default function ProductCard({ product, view = "grid" }: Props) {
                   alt={`${product.name} - image ${i + 1}`}
                   fill
                   className="object-cover"
-                  unoptimized
+                  sizes={isList ? "(max-width: 640px) 128px, 192px" : "(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"}
+                  priority={priority && i === 0}
                 />
               </Link>
             ))}
