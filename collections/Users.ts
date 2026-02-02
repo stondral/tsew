@@ -96,18 +96,43 @@ export const Users: CollectionConfig = {
   },
 
   // ✅ 2. Simplified Access Control
+  // ✅ 2. Simplified Access Control
   access: {
-    read: ({ req }) => {
-      // Public can only see Sellers
-      if (!req.user) return { role: { equals: "seller" } }
-      // Admins see all, Users see themselves
-      const user = req.user as any;
-      if (user.role === "admin") return true
-      return { id: { equals: user.id } } as any
+    read: ({ req: { user } }) => {
+      const authUser = user as any
+      // 1. If no user is logged in, only allow reading sellers (for frontend/middleware)
+      if (!authUser) {
+        return {
+          role: {
+            equals: "seller",
+          },
+        } as any
+      }
+
+      // 2. If Admin, allow reading everything
+      if (authUser.role === "admin") {
+        return true
+      }
+
+      // 3. Keep the "User sees only self" rule for regular users
+      return {
+        id: {
+          equals: authUser.id,
+        },
+      } as any
     },
     create: () => true,
-    update: ({ req }) => (req.user as any)?.role === "admin" || { id: { equals: req.user?.id } },
-    delete: ({ req }) => (req.user as any)?.role === "admin",
+    update: ({ req: { user } }) => {
+      const authUser = user as any
+      if (!authUser) return false
+      if (authUser.role === "admin") return true
+      return {
+        id: {
+          equals: authUser.id,
+        },
+      } as any
+    },
+    delete: ({ req: { user } }) => (user as any)?.role === "admin",
   },
 
   hooks: {
