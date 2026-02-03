@@ -29,19 +29,28 @@ export const Feedback: CollectionConfig = {
       required: true,
     },
     {
+      name: 'userRole',
+      type: 'select',
+      required: true,
+      defaultValue: 'buyer',
+      options: [
+        { label: 'Buyer (Customer)', value: 'buyer' },
+        { label: 'Seller (Merchant)', value: 'seller' },
+      ],
+    },
+    {
       name: 'visualAppeal',
       type: 'number',
-      required: true,
       min: 1,
       max: 10,
       admin: {
         description: 'Visual appeal and ease of navigation (1-10)',
+        condition: (data) => data?.userRole === 'buyer',
       },
     },
     {
       name: 'discoverySource',
       type: 'select',
-      required: true,
       options: [
         { label: 'Email Newsletter', value: 'email' },
         { label: 'Direct Contact (Founders)', value: 'direct' },
@@ -50,23 +59,27 @@ export const Feedback: CollectionConfig = {
         { label: 'Social Media', value: 'social' },
         { label: 'Other', value: 'other' },
       ],
+      admin: {
+        condition: (data) => data?.userRole === 'buyer',
+      },
     },
     {
       name: 'platformInterest',
       type: 'select',
-      required: true,
       options: [
         { label: 'Very Interested', value: 'very' },
         { label: 'Somewhat Interested', value: 'somewhat' },
         { label: 'Neutral', value: 'neutral' },
         { label: 'Not Interested', value: 'none' },
       ],
+      admin: {
+        condition: (data) => data?.userRole === 'buyer',
+      },
     },
     {
       name: 'categories',
       type: 'select',
       hasMany: true,
-      required: true,
       options: [
         { label: 'Fashion & Apparel', value: 'fashion' },
         { label: 'Electronics & Accessories', value: 'electronics' },
@@ -75,11 +88,42 @@ export const Feedback: CollectionConfig = {
         { label: 'Artisanal/Handmade Goods', value: 'artisanal' },
         { label: 'Other', value: 'other' },
       ],
+      admin: {
+        condition: (data) => data?.userRole === 'buyer',
+      },
+    },
+    {
+      name: 'problemsSolved',
+      type: 'textarea',
+      admin: {
+        description: 'Problems we can solve that others dont (Seller Only)',
+        condition: (data) => data?.userRole === 'seller',
+      },
+    },
+    {
+      name: 'sellerUiFeedback',
+      type: 'textarea',
+      admin: {
+        description: 'Feedback on seller UI (Seller Only)',
+        condition: (data) => data?.userRole === 'seller',
+      },
+    },
+    {
+      name: 'wantsToJoin',
+      type: 'select',
+      options: [
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' },
+        { label: 'Maybe later', value: 'maybe' },
+      ],
+      admin: {
+        description: 'Would you like to join us? (Seller Only)',
+        condition: (data) => data?.userRole === 'seller',
+      },
     },
     {
       name: 'improvements',
       type: 'textarea',
-      required: true,
     },
   ],
   timestamps: true,

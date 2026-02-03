@@ -6,7 +6,7 @@ import config from "@/payload.config";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-export async function acceptOrderAction(orderId: string, deliveryData: { provider: string, cost: number, gst: number }) {
+export async function acceptOrderAction(orderId: string, deliveryData: { provider: string, cost: number, gst: number, pickupWarehouse: string }) {
   const payload = await getPayload({ config });
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });

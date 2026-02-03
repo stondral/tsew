@@ -13,13 +13,13 @@ import {
   Truck,
   CheckCircle2,
   Clock,
-  Printer,
   ShieldCheck
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { resolveMediaUrl } from "@/lib/utils";
 import Image from "next/image";
+import InvoiceButton from "@/components/orders/InvoiceButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -72,13 +72,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
     }));
   }
 
-  // Fetch address details (since it's a relationship)
-  const addressId = typeof order.shippingAddress === 'string' ? order.shippingAddress : order.shippingAddress.id;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const address = await (payload as any).findByID({
-    collection: "addresses",
-    id: addressId,
-  });
+  const address = order.shippingAddress;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -102,10 +96,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Orders
            </Link>
-           <button className="inline-flex items-center text-sm font-bold text-gray-400 hover:text-orange-600 transition-all ml-auto sm:ml-0">
-              <Printer className="w-4 h-4 mr-2" />
-              Print Invoice
-           </button>
+            <InvoiceButton order={order} address={address} />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">

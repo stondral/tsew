@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -15,16 +16,31 @@ const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Discover" },
   { href: "/about-us", label: " Our Story" },
-  { href: "/startups", label: "Startups" },
+  { href: "/feedback", label: "Feedback" },
   { href: "/about-us", label: "About Us" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const isFeedbackPage = pathname === "/feedback";
+
+  useEffect(() => {
+    if (!isFeedbackPage) return;
+    
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 100);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isFeedbackPage]);
 
   return (
-    <nav className="sticky top-4 z-50 w-[95%] max-w-7xl mx-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] ring-1 ring-black/5">
+    <nav className={`sticky top-4 z-50 w-[95%] max-w-7xl mx-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] ring-1 ring-black/5 transition-all duration-300 ${
+      isFeedbackPage && isScrolled ? "opacity-0 pointer-events-none -translate-y-full" : "opacity-100"
+    }`}>
       <div className="container flex h-16 items-center px-4 md:px-8 relative">
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-accent/10 via-transparent to-accent/10 pointer-events-none opacity-50" />
 
@@ -82,7 +98,7 @@ export default function Navbar() {
 
         {/* desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium z-10">
-          {NAV_LINKS.slice(0, 3).map((link) => (
+          {NAV_LINKS.slice(0, 4).map((link) => (
             <Link
               key={link.href}
               href={link.href}

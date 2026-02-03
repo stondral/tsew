@@ -1,7 +1,7 @@
 import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
-import { AddProductForm } from "@/components/seller/AddProductForm";
+import { AddProductFormMultiStep } from "@/components/seller/AddProductFormMultiStep";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -71,7 +71,7 @@ export default async function AddProductPage() {
         </div>
       </div>
 
-      <AddProductForm categories={categoriesRes.docs} />
+      <AddProductFormMultiStep categories={categoriesRes.docs} />
     </div>
   );
 }

@@ -12,12 +12,21 @@ export default async function IncomingOrdersPage() {
   const requestHeaders = await headers()
   const { user } = await payload.auth({ headers: requestHeaders })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!user || ((user as any).role !== 'seller' && (user as any).role !== 'admin')) {
+  interface User { id: string; role?: string }
+  if (!user || ((user as User).role !== 'seller' && (user as User).role !== 'admin')) {
     redirect("/auth/login?redirect=/seller/orders/incoming")
   }
 
   const orders = await getIncomingOrders(user.id)
+  
+  // Fetch seller's warehouses
+  const warehousesRes = await payload.find({
+    collection: "warehouses" as never,
+    where: {
+      user: { equals: user.id },
+    },
+    limit: 100,
+  })
 
-  return <IncomingOrdersClient orders={orders} />
+  return <IncomingOrdersClient orders={orders} warehouses={warehousesRes.docs} />
 }

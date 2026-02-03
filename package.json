@@ -28,6 +28,8 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "graphql": "^16.12.0",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "motion": "^12.27.0",
     "next": "15.4.10",

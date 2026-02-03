@@ -10,13 +10,23 @@ import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { CheckCircle2, ChevronRight, ChevronLeft, Send, Check } from "lucide-react"
 
-const steps = [
+const buyerSteps = [
   { id: "info", title: "Let's get started", description: "First, we'd love to know who you are." },
+  { id: "role", title: "Your Role", description: "Are you a Seller or Buyer?" },
   { id: "visual", title: "Visual Appeal", description: "Question 1 of 5" },
   { id: "discovery", title: "Brand Discovery", description: "Question 2 of 5" },
   { id: "interest", title: "Platform Interest", description: "Question 3 of 5" },
   { id: "categories", title: "Product Categories", description: "Question 4 of 5" },
   { id: "improvement", title: "Future Improvements", description: "Question 5 of 5" },
+]
+
+const sellerSteps = [
+  { id: "info", title: "Let's get started", description: "First, we'd love to know who you are." },
+  { id: "role", title: "Your Role", description: "Are you a Seller or Buyer?" },
+  { id: "model", title: "Our Model", description: "How Stond Emporium Works" },
+  { id: "problems", title: "Unique Value", description: "Question 1 of 3" },
+  { id: "sellerui", title: "Seller Dashboard", description: "Question 2 of 3" },
+  { id: "join", title: "Join Us", description: "Question 3 of 3" },
 ]
 
 export default function FeedbackPage() {
@@ -25,16 +35,22 @@ export default function FeedbackPage() {
     name: "",
     email: "",
     phone: "",
+    userRole: "" as "buyer" | "seller" | "",
     visualAppeal: 0,
     discoverySource: "",
     platformInterest: "",
     categories: [] as string[],
     otherCategory: "",
+    problemsSolved: "",
+    sellerUiFeedback: "",
+    wantsToJoin: "",
     improvements: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const steps = formData.userRole === "seller" ? sellerSteps : buyerSteps
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const isValidPhone = (phone: string) => /^\d{10}$/.test(phone.replace(/\D/g, ""))
@@ -67,8 +83,18 @@ export default function FeedbackPage() {
     }
 
     const result = await submitFeedback({
-      ...formData,
-      categories: finalCategories
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      userRole: formData.userRole as 'buyer' | 'seller',
+      visualAppeal: formData.visualAppeal || undefined,
+      discoverySource: formData.discoverySource || undefined,
+      platformInterest: formData.platformInterest || undefined,
+      categories: finalCategories.length > 0 ? finalCategories : undefined,
+      problemsSolved: formData.problemsSolved || undefined,
+      sellerUiFeedback: formData.sellerUiFeedback || undefined,
+      wantsToJoin: formData.wantsToJoin || undefined,
+      improvements: formData.improvements,
     })
     
     if (result.success) {
@@ -148,7 +174,122 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 1: // VISUAL APPEAL
+      case 1: // ROLE SELECTION
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            <Label className="text-white text-lg block text-center leading-relaxed">
+              Are you a Seller or a Buyer?
+            </Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => updateField("userRole", "buyer")}
+                className={`p-8 rounded-2xl text-center transition-all border ${
+                  formData.userRole === "buyer"
+                  ? "bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/20"
+                  : "bg-white/20 border-white/30 text-white/90 hover:bg-white/30"
+                }`}
+              >
+                <div className="text-4xl mb-3">🛒</div>
+                <h3 className="font-bold text-xl mb-2">Buyer</h3>
+                <p className="text-sm opacity-70">I want to shop for products</p>
+              </button>
+              <button
+                onClick={() => updateField("userRole", "seller")}
+                className={`p-8 rounded-2xl text-center transition-all border ${
+                  formData.userRole === "seller"
+                  ? "bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/20"
+                  : "bg-white/20 border-white/30 text-white/90 hover:bg-white/30"
+                }`}
+              >
+                <div className="text-4xl mb-3">🏪</div>
+                <h3 className="font-bold text-xl mb-2">Seller</h3>
+                <p className="text-sm opacity-70">I want to sell my products</p>
+              </button>
+            </div>
+            <div className="flex gap-4 pt-2">
+              <Button 
+                variant="ghost" 
+                onClick={handleBack} 
+                className="flex-1 border border-white/20 text-white hover:bg-white/10 h-12"
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button 
+                onClick={handleNext} 
+                disabled={!formData.userRole}
+                className="flex-[2] bg-orange-500 hover:bg-orange-600 h-12"
+              >
+                Continue <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )
+
+      case 2: // VISUAL APPEAL (Buyer) OR MODEL INFO (Seller)
+        if (formData.userRole === "seller") {
+          return (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-4">
+                <h2 className="text-2xl font-bold text-white">How Stond Emporium Works</h2>
+                <div className="space-y-6 text-left">
+                  <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
+                    <div className="flex items-start gap-4">
+                      <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center shrink-0 font-bold text-white">1</div>
+                      <div>
+                        <h3 className="text-white font-bold text-lg mb-2">Zero Commission Model</h3>
+                        <p className="text-white/60 text-sm leading-relaxed">Unlike other platforms that charge 15-30% commission, we charge a flat monthly subscription. Keep 100% of your profits.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
+                    <div className="flex items-start gap-4">
+                      <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center shrink-0 font-bold text-white">2</div>
+                      <div>
+                        <h3 className="text-white font-bold text-lg mb-2">Dedicated Seller Dashboard + Whatsapp Integration</h3>
+                        <p className="text-white/60 text-sm leading-relaxed">Manage inventory, track analytics, process orders,Your business one chat away</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 p-6 rounded-2xl">
+                    <div className="flex items-start gap-4">
+                      <div className="h-10 w-10 bg-orange-500 rounded-full flex items-center justify-center shrink-0 font-bold text-white">3</div>
+                      <div>
+                        <h3 className="text-white font-bold text-lg mb-2">India-First Platform</h3>
+                        <p className="text-white/60 text-sm leading-relaxed">Built specifically for Indian sellers and buyers. Local payment methods, logistics partners, and customer support that understands your market.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleBack} 
+                  className="flex-1 border border-white/20 text-white hover:bg-white/10 h-12"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <Button 
+                  onClick={handleNext} 
+                  className="flex-[2] bg-orange-500 hover:bg-orange-600 h-12"
+                >
+                  Got it! <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )
+        }
+        // BUYER: VISUAL APPEAL
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -199,7 +340,47 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 2: // DISCOVERY
+      case 3: // DISCOVERY (Buyer) OR PROBLEMS SOLVED (Seller)
+        if (formData.userRole === "seller") {
+          return (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="space-y-4">
+                <Label htmlFor="problemsSolved" className="text-white text-lg block text-center leading-relaxed">
+                  What problems can Stond Emporium solve for you that other platforms don&apos;t?
+                </Label>
+                <Textarea
+                  id="problemsSolved"
+                  placeholder="Tell us about your challenges with current platforms..."
+                  value={formData.problemsSolved}
+                  onChange={(e) => updateField("problemsSolved", e.target.value)}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-[150px] focus:ring-orange-500 text-base"
+                />
+              </div>
+              <div className="flex gap-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleBack} 
+                  className="flex-1 border border-white/20 text-white hover:bg-white/10 h-12"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <Button 
+                  onClick={handleNext} 
+                  disabled={!formData.problemsSolved}
+                  className="flex-[2] bg-orange-500 hover:bg-orange-600 h-12"
+                >
+                  Next <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )
+        }
+        // BUYER: DISCOVERY
         const discoveryOptions = [
           { label: "Email Newsletter", value: "email" },
           { label: "Direct Contact (Founders)", value: "direct" },
@@ -252,7 +433,47 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 3: // INTEREST
+      case 4: // INTEREST (Buyer) OR SELLER UI FEEDBACK (Seller)
+        if (formData.userRole === "seller") {
+          return (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="space-y-4">
+                <Label htmlFor="sellerUiFeedback" className="text-white text-lg block text-center leading-relaxed">
+                  What are your thoughts on our seller dashboard and interface?
+                </Label>
+                <Textarea
+                  id="sellerUiFeedback"
+                  placeholder="Share your feedback on the seller experience..."
+                  value={formData.sellerUiFeedback}
+                  onChange={(e) => updateField("sellerUiFeedback", e.target.value)}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40 min-h-[150px] focus:ring-orange-500 text-base"
+                />
+              </div>
+              <div className="flex gap-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleBack} 
+                  className="flex-1 border border-white/20 text-white hover:bg-white/10 h-12"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <Button 
+                  onClick={handleNext} 
+                  disabled={!formData.sellerUiFeedback}
+                  className="flex-[2] bg-orange-500 hover:bg-orange-600 h-12"
+                >
+                  Almost Done <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )
+        }
+        // BUYER: INTEREST
         const interestOptions = [
           { label: "Very Interested", value: "very" },
           { label: "Somewhat Interested", value: "somewhat" },
@@ -306,7 +527,61 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 4: // CATEGORIES
+      case 5: // CATEGORIES (Buyer) OR JOIN INTEREST (Seller)
+        if (formData.userRole === "seller") {
+          const joinOptions = [
+            { label: "Yes, I am ready to join!", value: "yes" },
+            { label: "Maybe later", value: "maybe" },
+            { label: "No, not interested", value: "no" },
+          ]
+          return (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <Label className="text-white text-lg block leading-relaxed">
+                  Would you like to join Stond Emporium as a seller?
+                </Label>
+                <p className="text-white/40 text-sm italic">Start selling with zero commission fees</p>
+              </div>
+              <div className="space-y-3">
+                {joinOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => updateField("wantsToJoin", opt.value)}
+                    className={`w-full p-5 rounded-2xl text-center font-medium transition-all border ${
+                      formData.wantsToJoin === opt.value
+                      ? "bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/20"
+                      : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-4 pt-2">
+                <Button 
+                  variant="ghost" 
+                  onClick={handleBack} 
+                  className="flex-1 border border-white/20 text-white hover:bg-white/10 h-12"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Back
+                </Button>
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={!formData.wantsToJoin || isSubmitting}
+                  className="flex-[2] bg-orange-500 hover:bg-orange-600 h-12"
+                >
+                  {isSubmitting ? "Submitting..." : "Complete Submission"} <Send className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )
+        }
+        // BUYER: CATEGORIES
         const categories = [
           { label: "Fashion & Apparel", value: "fashion" },
           { label: "Electronics & Accessories", value: "electronics" },
@@ -381,7 +656,7 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 5: // IMPROVEMENTS
+      case 6: // IMPROVEMENTS (Buyer only)
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}

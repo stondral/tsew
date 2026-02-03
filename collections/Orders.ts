@@ -97,6 +97,14 @@ export const Orders: CollectionConfig = {
         { name: "cost", type: "number" },
         { name: "gst", type: "number" },
         { name: "scheduledAt", type: "date" },
+        {
+          name: "pickupWarehouse",
+          type: "relationship",
+          relationTo: "warehouses" as any,
+          admin: {
+            description: "The warehouse where the order will be picked up from.",
+          },
+        },
       ],
     },
 

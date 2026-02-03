@@ -16,7 +16,7 @@ export async function getIncomingOrders(sellerId: string) {
   return data.docs;
 }
 
-export async function acceptOrder(orderId: string, sellerId: string, deliveryData: { provider: string, cost: number, gst: number }) {
+export async function acceptOrder(orderId: string, sellerId: string, deliveryData: { provider: string, cost: number, gst: number, pickupWarehouse: string }) {
   const payload = await getPayload({ config });
   
   // Security check: Verify seller owns the order and it's PENDING
@@ -56,6 +56,7 @@ export async function acceptOrder(orderId: string, sellerId: string, deliveryDat
         cost: deliveryData.cost,
         gst: deliveryData.gst,
         scheduledAt: new Date().toISOString(),
+        pickupWarehouse: deliveryData.pickupWarehouse,
       }
     },
     overrideAccess: true, // Manual check performed above

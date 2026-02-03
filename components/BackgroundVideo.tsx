@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 export default function BackgroundVideo() {
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
@@ -28,10 +29,12 @@ export default function BackgroundVideo() {
             transition={{ duration: 1.5, ease: "easeInOut" }}
             className="absolute inset-0 z-10"
           >
-            <img
+            <Image
               src="/slide-screenshot.png"
               alt="Hero Preview"
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              priority
             />
           </motion.div>
         )}

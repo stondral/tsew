@@ -7,10 +7,14 @@ export async function submitFeedback(formData: {
   name: string;
   email: string;
   phone: string;
-  visualAppeal: number;
-  discoverySource: string;
-  platformInterest: string;
-  categories: string[];
+  userRole: 'buyer' | 'seller';
+  visualAppeal?: number;
+  discoverySource?: string;
+  platformInterest?: string;
+  categories?: string[];
+  problemsSolved?: string;
+  sellerUiFeedback?: string;
+  wantsToJoin?: string;
   improvements: string;
 }) {
   try {
@@ -23,10 +27,17 @@ export async function submitFeedback(formData: {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        userRole: formData.userRole,
+        // Buyer fields
         visualAppeal: formData.visualAppeal,
         discoverySource: formData.discoverySource,
         platformInterest: formData.platformInterest,
         categories: formData.categories,
+        // Seller fields
+        problemsSolved: formData.problemsSolved,
+        sellerUiFeedback: formData.sellerUiFeedback,
+        wantsToJoin: formData.wantsToJoin,
+        // Common field
         improvements: formData.improvements,
       },
     });
