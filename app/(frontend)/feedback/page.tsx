@@ -373,7 +373,7 @@ export default function FeedbackPage() {
           >
             <div className="text-center space-y-3">
               <Label className="text-white text-xl block leading-relaxed font-semibold">
-                When you discover a new brand, what is the #1 &apos;Green Flag&apos; that gives you the confidence to place an order instantly?
+                When you discover a new brand, what is the #1 Green Flag that gives you the confidence to place an order instantly?
               </Label>
               <p className="text-white/50 text-sm italic">
                 Choose the option that matters most to you
