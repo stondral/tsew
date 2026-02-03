@@ -345,7 +345,7 @@ export default function FeedbackPage() {
         const greenFlagOptions = [
           { 
             emoji: "🚀", 
-            label: "A smooth 'Guest Checkout' where I don&apos;t have to create an account", 
+            label: "A smooth 'Guest Checkout' where I dont have to create an account", 
             value: "guest_checkout" 
           },
           { 
