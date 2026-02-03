@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Package, ArrowRight, Loader2 } from "lucide-react";
@@ -14,28 +14,39 @@ function OrderSuccessContent() {
   const { clearCart } = useCart();
   const cartCleared = useRef(false);
 
+  // Handle both single orderId (legacy) and multiple orderIds (new)
   const orderId = searchParams.get("orderId");
+  const orderIdsString = searchParams.get("orderIds");
+  const checkoutId = searchParams.get("checkoutId");
+  
   const paymentId = searchParams.get("paymentId");
-  const razorpayOrderId = searchParams.get("razorpayOrderId");
+  const razorpayOrderId = searchParams.get("razorpayOrderId"); // From Razorpay callback
   const signature = searchParams.get("signature");
 
   const [status, setStatus] = useState<"loading" | "paid" | "pending" | "failed">("loading");
   const [method, setMethod] = useState<string | null>(null);
+  
+  // Parse order IDs
+  const orderIds = useMemo(() => 
+    orderIdsString ? orderIdsString.split(',') : (orderId ? [orderId] : []),
+    [orderIdsString, orderId]
+  );
+  const primaryOrderId = orderIds[0];
 
   useEffect(() => {
-    if (!orderId) {
+    if (orderIds.length === 0) {
       router.push("/");
       return;
     }
 
     const performVerification = async () => {
-      // 1. If we have signature, verify immediately
-      if (paymentId && razorpayOrderId && signature) {
+      // 1. If we have signature, verify immediately (using first order ID)
+      if (paymentId && (razorpayOrderId || checkoutId) && signature) {
         setMethod("razorpay");
         const res = await verifyPayment({
-            orderId,
+            orderId: primaryOrderId,
             razorpayPaymentId: paymentId,
-            razorpayOrderId,
+            razorpayOrderId: razorpayOrderId || checkoutId!,
             razorpaySignature: signature
         });
 
@@ -52,7 +63,8 @@ function OrderSuccessContent() {
       // 2. Poll status or check if it's COD
       const checkStatus = async (count = 0) => {
         try {
-          const res = await fetch(`/api/orders/status?orderId=${orderId}`);
+          // Check the first order of the group
+          const res = await fetch(`/api/orders/status?orderId=${primaryOrderId}`);
           const data = await res.json();
           setMethod(data.paymentMethod);
 
@@ -89,7 +101,7 @@ function OrderSuccessContent() {
     };
 
     performVerification();
-  }, [orderId, paymentId, razorpayOrderId, signature, router, clearCart]);
+  }, [orderIds, primaryOrderId, paymentId, razorpayOrderId, checkoutId, signature, router, clearCart]);
 
   if (status === "loading") {
     return (
@@ -104,7 +116,7 @@ function OrderSuccessContent() {
   }
 
   if (status === "failed") {
-      router.push(`/order-failure?orderId=${orderId}`);
+      router.push(`/order-failure?orderIds=${orderIds.join(',')}`);
       return null;
   }
 
@@ -129,9 +141,20 @@ function OrderSuccessContent() {
 
         <div className="bg-gray-50 rounded-2xl p-4 md:p-8 border border-gray-100 mb-12 text-left">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-gray-200">
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-widest font-bold mb-1">Order Number</p>
-              <p className="text-base md:text-lg font-mono font-bold text-gray-800 break-all">{orderId}</p>
+            <div className="flex-1">
+              <p className="text-xs text-gray-400 uppercase tracking-widest font-bold mb-1">
+                {orderIds.length > 1 ? "Order Numbers" : "Order Number"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {orderIds.map((id) => (
+                  <p key={id} className="text-base font-mono font-bold text-gray-800 break-all bg-white px-2 py-1 rounded border border-gray-100 italic">
+                    {id}
+                  </p>
+                ))}
+              </div>
+              {checkoutId && (
+                <p className="mt-2 text-[10px] text-gray-400">Checkout ID: {checkoutId}</p>
+              )}
             </div>
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-widest font-bold mb-1">Payment Method</p>

@@ -16,6 +16,7 @@ export async function submitFeedback(formData: {
   sellerUiFeedback?: string;
   wantsToJoin?: string;
   improvements: string;
+  otherCategory?: string;
 }) {
   try {
     const payload = await getPayload({ config });
@@ -39,6 +40,7 @@ export async function submitFeedback(formData: {
         wantsToJoin: formData.wantsToJoin,
         // Common field
         improvements: formData.improvements,
+        otherCategory: formData.otherCategory,
       },
     });
 

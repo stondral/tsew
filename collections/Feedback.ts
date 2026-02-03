@@ -93,6 +93,14 @@ export const Feedback: CollectionConfig = {
       },
     },
     {
+      name: 'otherCategory',
+      type: 'text',
+      admin: {
+        description: 'Specific category if "Other" was selected',
+        condition: (data) => data?.userRole === 'buyer' && data?.categories?.includes('other'),
+      },
+    },
+    {
       name: 'problemsSolved',
       type: 'textarea',
       admin: {

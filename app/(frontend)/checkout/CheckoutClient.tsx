@@ -48,7 +48,7 @@ export default function CheckoutClient({ addresses }: Props) {
     }
 
     // Razorpay comes next step
-    console.log("ORDER CREATED:", res.orderId);
+    console.log("ORDER(S) CREATED:", res.orderIds);
   };
 
   return (

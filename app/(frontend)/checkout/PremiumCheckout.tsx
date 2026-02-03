@@ -191,7 +191,7 @@ export default function PremiumCheckout({
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             handler: async function (response: any) {
               setLoading(true);
-              // Finalise: Verify and Create Order
+              // Finalise: Verify and Create Orders
               const finalRes = await finaliseRazorpayCheckout({
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
@@ -202,8 +202,9 @@ export default function PremiumCheckout({
                 guestPhone: formData.phone,
               });
 
-              if (finalRes.ok && finalRes.orderId) {
-                router.push(`/order-success?orderId=${finalRes.orderId}`);
+              if (finalRes.ok && finalRes.orderIds) {
+                // Redirect with all order IDs (comma-separated)
+                router.push(`/order-success?orderIds=${finalRes.orderIds.join(',')}&checkoutId=${finalRes.checkoutId}`);
               } else {
                 setError(finalRes.error || "Payment successful but order creation failed. Contact support.");
                 setLoading(false);
@@ -240,8 +241,9 @@ export default function PremiumCheckout({
           guestPhone: formData.phone,
         });
 
-        if (res.ok && res.orderId) {
-          router.push(`/order-success?orderId=${res.orderId}`);
+        if (res.ok && res.orderIds) {
+          // Redirect with all order IDs (comma-separated)
+          router.push(`/order-success?orderIds=${res.orderIds.join(',')}&checkoutId=${res.checkoutId}`);
         } else {
           setError(res.error || "Checkout failed");
           setLoading(false);

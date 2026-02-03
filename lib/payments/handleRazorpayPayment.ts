@@ -27,7 +27,7 @@ export const handleRazorpayPayment = async (
   const orders = await (payload as any).find({
     collection: "orders",
     where: {
-      razorpayOrderId: {
+      checkoutId: {
         equals: orderData.razorpay_order_id,
       },
     },

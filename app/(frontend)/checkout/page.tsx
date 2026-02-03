@@ -24,7 +24,7 @@ export default async function CheckoutPage() {
   });
 
   if (!user) {
-    redirect("/auth");
+    redirect("/auth/login?redirect=/checkout");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

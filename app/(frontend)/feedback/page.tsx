@@ -73,15 +73,7 @@ export default function FeedbackPage() {
     setIsSubmitting(true)
     setError(null)
     
-    // Merge 'other' category if provided
-    const finalCategories = [...formData.categories]
-    if (formData.categories.includes("other") && formData.otherCategory) {
-      // Remove 'other' marker and add specific value
-      const index = finalCategories.indexOf("other")
-      if (index > -1) finalCategories.splice(index, 1)
-      finalCategories.push(`Other: ${formData.otherCategory}`)
-    }
-
+    // Simplified submission - categories.includes("other") handled by otherCategory field
     const result = await submitFeedback({
       name: formData.name,
       email: formData.email,
@@ -90,7 +82,8 @@ export default function FeedbackPage() {
       visualAppeal: formData.visualAppeal || undefined,
       discoverySource: formData.discoverySource || undefined,
       platformInterest: formData.platformInterest || undefined,
-      categories: finalCategories.length > 0 ? finalCategories : undefined,
+      categories: formData.categories.length > 0 ? formData.categories : undefined,
+      otherCategory: formData.otherCategory || undefined,
       problemsSolved: formData.problemsSolved || undefined,
       sellerUiFeedback: formData.sellerUiFeedback || undefined,
       wantsToJoin: formData.wantsToJoin || undefined,
@@ -489,7 +482,7 @@ export default function FeedbackPage() {
           >
             <div className="text-center space-y-2">
               <Label className="text-white text-lg block leading-relaxed">
-                How interested are you in a platform that is a marketplace exclusively for Indian sellers and sellers?
+                How interested are you in a platform that is a marketplace exclusively for Indian sellers and startups?
               </Label>
               <p className="text-white/40 text-sm italic">Local empowerment, global standards.</p>
             </div>

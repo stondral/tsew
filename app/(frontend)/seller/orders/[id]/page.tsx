@@ -400,11 +400,11 @@ export default async function OrderDetailPage({ params }: PageProps) {
                   <Hash className="h-4 w-4 text-slate-300 group-hover:text-amber-500 transition-colors shrink-0" />
                 </div>
               </div>
-              {order.razorpayOrderId && (
+              {order.checkoutId && (
                 <div className="space-y-3">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none block">Payment Signal Key</label>
                   <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-indigo-200 transition-colors">
-                    <code className="text-[11px] font-mono text-slate-500 truncate mr-6 font-bold">{order.razorpayOrderId}</code>
+                    <code className="text-[11px] font-mono text-slate-500 truncate mr-6 font-bold">{order.checkoutId}</code>
                     <Zap className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 transition-colors shrink-0" />
                   </div>
                 </div>

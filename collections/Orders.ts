@@ -196,10 +196,10 @@ export const Orders: CollectionConfig = {
     },
 
     {
-      name: "razorpayOrderId",
+      name: "checkoutId",
       type: "text",
-      unique: true,
       index: true,
+      // Used for grouping multiple orders from the same checkout (split by seller)
     },
     {
       name: "razorpayPaymentId",

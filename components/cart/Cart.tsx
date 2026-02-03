@@ -14,14 +14,23 @@ import {
 } from "@/components/ui/sheet";
 import { useCart } from "./CartContext";
 import CartItemComponent from "./CartItemComponent";
+import { useAuth } from "@/components/auth/AuthContext";
 
 export default function Cart() {
   const { cart, isOpen, setIsOpen, clearCart } = useCart();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = () => {
+    if (!isAuthenticated) {
+      // Redirect to login page with return URL to checkout
+      setIsOpen(false);
+      router.push("/auth/login?redirect=/checkout");
+      return;
+    }
+    
     setIsOpen(false);
     router.push("/checkout");
   };

@@ -49,7 +49,7 @@ export async function createRazorpayOrderForCheckout(orderId: string) {
     collection: "orders",
     id: order.id,
     data: {
-      razorpayOrderId: razorpayOrder.id,
+      checkoutId: razorpayOrder.id,
     },
   });
 
