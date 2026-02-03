@@ -13,10 +13,11 @@ import { CheckCircle2, ChevronRight, ChevronLeft, Send, Check } from "lucide-rea
 const buyerSteps = [
   { id: "info", title: "Let's get started", description: "First, we'd love to know who you are." },
   // { id: "role", title: "Your Role", description: "Are you a Seller or Buyer?" },
-  { id: "visual", title: "Visual Appeal", description: "Question 1 of 3" },
+  { id: "visual", title: "Visual Appeal", description: "Question 1 of 4" },
+  { id: "greenFlag", title: "Trust Signals", description: "Question 2 of 4" },
   // { id: "discovery", title: "Brand Discovery", description: "Question 2 of 5" },
-  { id: "interest", title: "Platform Interest", description: "Question 2 of 3" },
-  { id: "categories", title: "Product Categories", description: "Question 3 of 3" },
+  { id: "interest", title: "Platform Interest", description: "Question 3 of 4" },
+  { id: "categories", title: "Product Categories", description: "Question 4 of 4" },
   { id: "improvement", title: "Future Improvements", description: "Final Step" },
 ]
 
@@ -40,6 +41,7 @@ export default function FeedbackPage() {
     userRole: "buyer" as "buyer" | "seller",
     visualAppeal: 0,
     discoverySource: "",
+    greenFlag: "",
     platformInterest: "",
     categories: [] as string[],
     otherCategory: "",
@@ -83,6 +85,7 @@ export default function FeedbackPage() {
       userRole: formData.userRole as 'buyer' | 'seller',
       visualAppeal: formData.visualAppeal || undefined,
       discoverySource: formData.discoverySource || undefined,
+      greenFlag: formData.greenFlag || undefined,
       platformInterest: formData.platformInterest || undefined,
       categories: formData.categories.length > 0 ? formData.categories : undefined,
       otherCategory: formData.otherCategory || undefined,
@@ -330,6 +333,79 @@ export default function FeedbackPage() {
               <Button 
                 onClick={handleNext} 
                 disabled={formData.visualAppeal === 0}
+                className="flex-[2] bg-orange-500 hover:bg-orange-600 h-12"
+              >
+                Next Question <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </motion.div>
+        )
+
+      case "greenFlag": // GREEN FLAG (Buyer)
+        const greenFlagOptions = [
+          { 
+            emoji: "🚀", 
+            label: "A smooth 'Guest Checkout' where I don&apos;t have to create an account", 
+            value: "guest_checkout" 
+          },
+          { 
+            emoji: "✨", 
+            label: "A clean, distraction-free store that lets me focus on the product", 
+            value: "clean_store" 
+          },
+          { 
+            emoji: "💳", 
+            label: "Recognized and seamless payment links (like UPI or WhatsApp Pay) that feel secure", 
+            value: "secure_payments" 
+          },
+          { 
+            emoji: "💬", 
+            label: "Seeing a real 'About Us' story or an instant way to chat with a human", 
+            value: "human_connection" 
+          },
+        ]
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            <div className="text-center space-y-3">
+              <Label className="text-white text-xl block leading-relaxed font-semibold">
+                When you discover a new brand, what is the #1 &apos;Green Flag&apos; that gives you the confidence to place an order instantly?
+              </Label>
+              <p className="text-white/50 text-sm italic">
+                Choose the option that matters most to you
+              </p>
+            </div>
+            <div className="space-y-3">
+              {greenFlagOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => updateField("greenFlag", opt.value)}
+                  className={`w-full p-5 rounded-2xl text-left transition-all border flex items-start gap-4 ${
+                    formData.greenFlag === opt.value
+                    ? "bg-orange-500 border-orange-400 text-white shadow-lg shadow-orange-500/20"
+                    : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20"
+                  }`}
+                >
+                  <span className="text-3xl shrink-0">{opt.emoji}</span>
+                  <span className="font-medium text-base leading-relaxed">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-4 pt-2">
+              <Button 
+                variant="ghost" 
+                onClick={handleBack} 
+                className="flex-1 border border-white/20 text-white hover:bg-white/10 h-12"
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+              <Button 
+                onClick={handleNext} 
+                disabled={!formData.greenFlag}
                 className="flex-[2] bg-orange-500 hover:bg-orange-600 h-12"
               >
                 Next Question <ChevronRight className="ml-2 h-4 w-4" />

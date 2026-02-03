@@ -64,6 +64,20 @@ export const Feedback: CollectionConfig = {
       },
     },
     {
+      name: 'greenFlag',
+      type: 'select',
+      options: [
+        { label: 'Guest Checkout (No account required)', value: 'guest_checkout' },
+        { label: 'Clean, distraction-free store', value: 'clean_store' },
+        { label: 'Recognized payment methods (UPI/WhatsApp Pay)', value: 'secure_payments' },
+        { label: 'Real About Us story or instant chat', value: 'human_connection' },
+      ],
+      admin: {
+        description: 'What gives you confidence to order from a new brand?',
+        condition: (data) => data?.userRole === 'buyer',
+      },
+    },
+    {
       name: 'platformInterest',
       type: 'select',
       options: [

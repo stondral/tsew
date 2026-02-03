@@ -10,6 +10,7 @@ export async function submitFeedback(formData: {
   userRole: 'buyer' | 'seller';
   visualAppeal?: number;
   discoverySource?: string;
+  greenFlag?: string;
   platformInterest?: string;
   categories?: string[];
   problemsSolved?: string;
@@ -32,6 +33,7 @@ export async function submitFeedback(formData: {
         // Buyer fields
         visualAppeal: formData.visualAppeal,
         discoverySource: formData.discoverySource,
+        greenFlag: formData.greenFlag,
         platformInterest: formData.platformInterest,
         categories: formData.categories,
         // Seller fields

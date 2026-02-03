@@ -27,15 +27,23 @@ export function getEmailTemplate(
   return template;
 }
 
+interface OrderItem {
+  image?: string | null;
+  name: string;
+  variant?: string | null;
+  quantity: number;
+  price: number;
+}
+
 /**
  * Generates an HTML table row for an order item
  */
-export function generateOrderItemRows(items: any[]): string {
+export function generateOrderItemRows(items: OrderItem[]): string {
   return items.map(item => `
     <tr>
       <td style="padding: 16px 0; border-bottom: 1px solid #e2e8f0;">
         <div style="display: flex; align-items: center; gap: 16px;">
-          ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 48px; hieght: 48px; object-fit: cover; border-radius: 8px;" />` : `<div style="width: 48px; height: 48px; background: #f1f5f9; border-radius: 8px;"></div>`}
+          ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px;" />` : `<div style="width: 48px; height: 48px; background: #f1f5f9; border-radius: 8px;"></div>`}
           <div>
             <p style="margin: 0; font-weight: 600; color: #0f172a; font-size: 14px;">${item.name}</p>
             ${item.variant ? `<p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px;">Variant: ${item.variant}</p>` : ''}
