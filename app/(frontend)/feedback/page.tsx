@@ -12,14 +12,15 @@ import { CheckCircle2, ChevronRight, ChevronLeft, Send, Check } from "lucide-rea
 
 const buyerSteps = [
   { id: "info", title: "Let's get started", description: "First, we'd love to know who you are." },
-  { id: "role", title: "Your Role", description: "Are you a Seller or Buyer?" },
-  { id: "visual", title: "Visual Appeal", description: "Question 1 of 5" },
-  { id: "discovery", title: "Brand Discovery", description: "Question 2 of 5" },
-  { id: "interest", title: "Platform Interest", description: "Question 3 of 5" },
-  { id: "categories", title: "Product Categories", description: "Question 4 of 5" },
-  { id: "improvement", title: "Future Improvements", description: "Question 5 of 5" },
+  // { id: "role", title: "Your Role", description: "Are you a Seller or Buyer?" },
+  { id: "visual", title: "Visual Appeal", description: "Question 1 of 3" },
+  // { id: "discovery", title: "Brand Discovery", description: "Question 2 of 5" },
+  { id: "interest", title: "Platform Interest", description: "Question 2 of 3" },
+  { id: "categories", title: "Product Categories", description: "Question 3 of 3" },
+  { id: "improvement", title: "Future Improvements", description: "Final Step" },
 ]
 
+/*
 const sellerSteps = [
   { id: "info", title: "Let's get started", description: "First, we'd love to know who you are." },
   { id: "role", title: "Your Role", description: "Are you a Seller or Buyer?" },
@@ -28,6 +29,7 @@ const sellerSteps = [
   { id: "sellerui", title: "Seller Dashboard", description: "Question 2 of 3" },
   { id: "join", title: "Join Us", description: "Question 3 of 3" },
 ]
+*/
 
 export default function FeedbackPage() {
   const [currentStep, setCurrentStep] = useState(0)
@@ -35,7 +37,7 @@ export default function FeedbackPage() {
     name: "",
     email: "",
     phone: "",
-    userRole: "" as "buyer" | "seller" | "",
+    userRole: "buyer" as "buyer" | "seller",
     visualAppeal: 0,
     discoverySource: "",
     platformInterest: "",
@@ -50,7 +52,7 @@ export default function FeedbackPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const steps = formData.userRole === "seller" ? sellerSteps : buyerSteps
+  const steps = buyerSteps // Defaulting to buyer only for now
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const isValidPhone = (phone: string) => /^\d{10}$/.test(phone.replace(/\D/g, ""))
@@ -114,8 +116,10 @@ export default function FeedbackPage() {
   }
 
   const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 0: // INFO
+    const stepId = steps[currentStep]?.id
+    
+    switch (stepId) {
+      case "info": // INFO
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -166,8 +170,8 @@ export default function FeedbackPage() {
             </Button>
           </motion.div>
         )
-
-      case 1: // ROLE SELECTION
+/*
+      case "role": // ROLE SELECTION
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -222,8 +226,9 @@ export default function FeedbackPage() {
             </div>
           </motion.div>
         )
-
-      case 2: // VISUAL APPEAL (Buyer) OR MODEL INFO (Seller)
+*/
+      case "visual": // VISUAL APPEAL (Buyer)
+      case "model": // MODEL INFO (Seller - currently unused)
         if (formData.userRole === "seller") {
           return (
             <motion.div
@@ -333,7 +338,8 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 3: // DISCOVERY (Buyer) OR PROBLEMS SOLVED (Seller)
+      case "discovery": // DISCOVERY (Buyer - currently unused)
+      case "problems": // PROBLEMS SOLVED (Seller - currently unused)
         if (formData.userRole === "seller") {
           return (
             <motion.div
@@ -426,7 +432,8 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 4: // INTEREST (Buyer) OR SELLER UI FEEDBACK (Seller)
+      case "interest": // INTEREST (Buyer)
+      case "sellerui": // SELLER UI FEEDBACK (Seller - currently unused)
         if (formData.userRole === "seller") {
           return (
             <motion.div
@@ -520,7 +527,8 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 5: // CATEGORIES (Buyer) OR JOIN INTEREST (Seller)
+      case "categories": // CATEGORIES (Buyer)
+      case "join": // JOIN INTEREST (Seller - currently unused)
         if (formData.userRole === "seller") {
           const joinOptions = [
             { label: "Yes, I am ready to join!", value: "yes" },
@@ -649,7 +657,7 @@ export default function FeedbackPage() {
           </motion.div>
         )
 
-      case 6: // IMPROVEMENTS (Buyer only)
+      case "improvement": // IMPROVEMENTS (Buyer only)
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}

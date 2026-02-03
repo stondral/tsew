@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Low Stock Alert - Stond Emporium</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        <div
+            style="background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #fee2e2;">
+            <!-- Urgency Header -->
+            <div style="background: #fef2f2; padding: 24px; text-align: center; border-bottom: 1px solid #fee2e2;">
+                <div
+                    style="background: #ef4444; color: white; display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 12px;">
+                    ⚠️ Action Required</div>
+                <h1 style="color: #991b1b; font-size: 22px; font-weight: 800; margin: 0;">Stock is Running Low!</h1>
+            </div>
+
+            <div style="padding: 40px 32px;">
+                <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">
+                    One of your popular items is almost out of stock. To avoid missing out on potential sales, we
+                    recommend restocking soon.
+                </p>
+
+                <!-- Product Detail Card -->
+                <div
+                    style="background: #f8fafc; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; display: table; width: 100%; box-sizing: border-box;">
+                    <div style="display: table-cell; vertical-align: middle; padding-right: 20px;">
+                        <p
+                            style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">
+                            Product</p>
+                        <p style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">{{productName}}</p>
+                        {{variantInfo}}
+                    </div>
+                    <div style="display: table-cell; vertical-align: middle; text-align: right; width: 100px;">
+                        <p
+                            style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase;">
+                            Stock</p>
+                        <p style="margin: 0; font-size: 28px; font-weight: 800; color: #ef4444;">{{currentStock}}</p>
+                    </div>
+                </div>
+
+                <!-- CTA Section -->
+                <div style="margin-top: 32px; text-align: center;">
+                    <a href="{{restockLink}}"
+                        style="display: inline-block; background: #ea580c; color: white; text-decoration: none; padding: 16px 48px; border-radius: 12px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(234,88,12,0.2);">Update
+                        Stock Now</a>
+                    <p style="margin: 20px 0 0 0; color: #94a3b8; font-size: 13px;">Pro-tip: Consistent stock
+                        availability improves your shop visibility on the marketplace.</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 24px; text-align: center; border-top: 1px solid #f1f5f9; background: #fafafa;">
+                <p
+                    style="color: #cbd5e1; font-size: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em; margin: 0;">
+                    Inventory Management Support • Stond Emporium</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

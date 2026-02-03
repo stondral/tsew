@@ -1,4 +1,5 @@
 import type { CollectionConfig } from "payload"
+import { getEmailTemplate, generateOrderItemRows, formatCurrency } from "@/lib/email-templates"
 
 export const Orders: CollectionConfig = {
   slug: "orders",
@@ -257,56 +258,159 @@ export const Orders: CollectionConfig = {
     ],
     afterChange: [
       async ({ doc, previousDoc, operation, req }) => {
-        // 1. Determine if stock should be reduced
-        // Condition A: New COD order or New PAID order (Created after verified payment)
-        const isNewSuccess = operation === 'create' && (doc.paymentMethod === 'cod' || doc.paymentStatus === 'paid');
+        const { payload } = req;
         
-        // Condition B: Payment transitioned to 'paid' (Webhook/Background flow)
-        const isPaidNow = operation === 'update' && 
-                          doc.paymentStatus === 'paid' && 
-                          previousDoc?.paymentStatus === 'pending';
+        // --- 1. STOCK UPDATES ---
+        // Condition A: New COD order or New PAID order
+        const isNewSuccess = operation === 'create' && (doc.paymentMethod === 'cod' || doc.paymentStatus === 'paid');
+        // Condition B: Payment transitioned to 'paid'
+        const isPaidNow = operation === 'update' && doc.paymentStatus === 'paid' && previousDoc?.paymentStatus === 'pending';
 
         if (isNewSuccess || isPaidNow) {
-          const { payload } = req;
+          const sellerItemsMap: Record<string, any[]> = {};
           
           for (const item of doc.items) {
             try {
-              // Fetch product to get current stock/variants
+              // Group by seller for notifications later
+              const sellerId = typeof item.seller === 'string' ? item.seller : item.seller?.id;
+              if (sellerId) {
+                if (!sellerItemsMap[sellerId]) sellerItemsMap[sellerId] = [];
+                sellerItemsMap[sellerId].push(item);
+              }
+
+              // Fetch product for stock update and low stock check
               const product = await (payload as any).findByID({
                 collection: 'products',
                 id: item.productId,
               });
 
-              if (!product) {
-                console.error(`Stock Update Error: Product ${item.productId} not found`);
-                continue;
-              }
+              if (!product) continue;
 
+              let newStock = 0;
               if (item.variantId && product.variants) {
-                // Update specific variant stock
+                const variant = product.variants.find((v: any) => v.id === item.variantId);
+                newStock = Math.max(0, (variant?.stock || 0) - item.quantity);
+                
                 await (payload as any).update({
                   collection: 'products',
                   id: product.id,
                   data: {
                     variants: product.variants.map((v: any) =>
-                      v.id === item.variantId
-                        ? { ...v, stock: Math.max(0, (v.stock || 0) - item.quantity) }
-                        : v
+                      v.id === item.variantId ? { ...v, stock: newStock } : v
                     ),
                   },
                 });
               } else {
-                // Update base product stock
+                newStock = Math.max(0, (product.stock || 0) - item.quantity);
                 await (payload as any).update({
                   collection: 'products',
                   id: product.id,
-                  data: {
-                    stock: Math.max(0, (product.stock || 0) - item.quantity),
-                  },
+                  data: { stock: newStock },
+                });
+              }
+
+              // --- 2. LOW STOCK ALERT ---
+              if (newStock < 5) {
+                const seller = await (payload as any).findByID({
+                  collection: 'users',
+                  id: sellerId,
+                });
+
+                if (seller) {
+                  const lowStockHtml = getEmailTemplate('low-stock-alert', {
+                    productName: product.name,
+                    currentStock: newStock.toString(),
+                    variantInfo: item.variantId ? `<p style="margin: 4px 0 0 0; color: #ef4444; font-size: 14px; font-weight: 600;">Variant: ${item.productName.split('(')[1]?.replace(')', '') || 'Selected variant'}</p>` : '',
+                    restockLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/seller/products/${product.id}`
+                  });
+
+                  await payload.sendEmail({
+                    to: seller.email,
+                    subject: `⚠️ Low Stock Alert: ${product.name}`,
+                    html: lowStockHtml,
+                  });
+                }
+              }
+            } catch (err) {
+              console.error(`Order Processing Error:`, err);
+            }
+          }
+
+          // --- 3. BUYER CONFIRMATION ---
+          try {
+            const buyer = await (payload as any).findByID({
+              collection: 'users',
+              id: typeof doc.user === 'string' ? doc.user : doc.user?.id,
+            });
+
+            if (buyer) {
+              const itemsTable = generateOrderItemRows(doc.items.map((i: any) => ({
+                name: i.productName,
+                image: i.productImage,
+                quantity: i.quantity,
+                price: i.priceAtPurchase,
+                variant: i.variantId ? i.productName.split('(')[1]?.replace(')', '') : null
+              })));
+
+              const confirmationHtml = getEmailTemplate('order-confirmation', {
+                username: buyer.username || 'Friend',
+                orderNumber: doc.orderNumber,
+                itemsTable,
+                subtotal: formatCurrency(doc.subtotal),
+                deliveryFee: formatCurrency(doc.shippingCost || 0),
+                total: formatCurrency(doc.total),
+                paymentMethod: doc.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (Prepaid)',
+                deliveryEta: '5-7 Business Days',
+                orderLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/orders/${doc.id}`,
+                supportLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/contact`
+              });
+
+              await payload.sendEmail({
+                to: buyer.email,
+                subject: `Order Confirmed 🎉 | Order #${doc.orderNumber}`,
+                html: confirmationHtml,
+              });
+            }
+          } catch (err) {
+            console.error('Buyer Confirmation Email Error:', err);
+          }
+
+          // --- 4. SELLER NOTIFICATIONS ---
+          for (const [sellerId, items] of Object.entries(sellerItemsMap)) {
+            try {
+              const seller = await (payload as any).findByID({
+                collection: 'users',
+                id: sellerId,
+              });
+
+              const address = typeof doc.shippingAddress === 'string' 
+                ? await (payload as any).findByID({ collection: 'addresses', id: doc.shippingAddress })
+                : doc.shippingAddress;
+
+              if (seller) {
+                const sellerItemsTable = generateOrderItemRows(items.map((i: any) => ({
+                  name: i.productName,
+                  image: i.productImage,
+                  quantity: i.quantity,
+                  price: i.priceAtPurchase,
+                  variant: i.variantId ? i.productName.split('(')[1]?.replace(')', '') : null
+                })));
+
+                const sellerHtml = getEmailTemplate('seller-order-notification', {
+                  location: address ? `${address.city}, ${address.pincode}` : 'Not provided',
+                  paymentStatus: doc.paymentStatus === 'paid' ? '✅ Paid' : '⏳ COD - Collect Cash',
+                  sellerItemsTable,
+                  orderLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/seller/orders/${doc.id}`
+                });
+
+                await payload.sendEmail({
+                  to: seller.email,
+                  subject: `🆕 New Order Received | #${doc.orderNumber}`,
+                  html: sellerHtml,
                 });
               }
             } catch (err) {
-              console.error(`Stock Update Error: Failed for product ${item.productId}:`, err);
+              console.error(`Seller Notification Error (${sellerId}):`, err);
             }
           }
         }

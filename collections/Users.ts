@@ -95,6 +95,33 @@ export const Users: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [
+      async ({ doc, previousDoc, operation, req }) => {
+        // Detect Role Transition: user -> seller
+        const isRoleUpgrade = operation === 'update' && 
+                            doc.role === 'seller' && 
+                            previousDoc?.role === 'user';
+        
+        if (isRoleUpgrade) {
+          const { payload } = req;
+          try {
+            const emailHtml = getEmailTemplate('seller-welcome', {
+              username: doc.username || 'Partner',
+              dashboardUrl: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/seller`
+            });
+
+            await payload.sendEmail({
+              to: doc.email,
+              subject: "You're officially a Stond Seller! 🎉",
+              html: emailHtml,
+            });
+            console.log(`Seller Welcome email sent to ${doc.email}`);
+          } catch (err) {
+            console.error('Failed to send Seller Welcome email:', err);
+          }
+        }
+      }
+    ]
   },
 
   fields: [
