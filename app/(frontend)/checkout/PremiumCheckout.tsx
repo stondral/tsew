@@ -23,6 +23,7 @@ import { createRazorpayIntent } from "./actions/createRazorpayIntent";
 import { finaliseRazorpayCheckout } from "./actions/finaliseRazorpayCheckout";
 import { createAddress } from "./actions/createAddress";
 import { CalculationResult } from "@/lib/cart/calculations";
+import { validateDiscountCode } from "@/lib/discount/validateDiscountCode";
 
 interface Address {
   id: string;
@@ -73,6 +74,13 @@ export default function PremiumCheckout({
   
   const [error, setError] = useState<string | null>(null);
 
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountValidating, setDiscountValidating] = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [appliedDiscount, setAppliedDiscount] = useState<any>(null);
+
   // Form state for new address
   const [formData, setFormData] = useState({
     firstName: "",
@@ -102,7 +110,8 @@ export default function PremiumCheckout({
           productId: i.productId,
           variantId: i.variantId,
           quantity: i.quantity,
-        }))
+        })),
+        appliedDiscount?.code // Pass applied discount code
       );
       
       if (res.ok && res.data) {
@@ -120,13 +129,73 @@ export default function PremiumCheckout({
     } else {
       setCalculating(false);
     }
-  }, [items, isCartLoading, cartItems]);
+  }, [items, isCartLoading, cartItems, appliedDiscount?.code]);
 
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Discount code handlers
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) {
+      setDiscountError("Please enter a discount code");
+      return;
+    }
+
+    setDiscountValidating(true);
+    setDiscountError(null);
+
+    const result = await validateDiscountCode(
+      discountCode,
+      totals?.subtotal || 0,
+      totals?.items.map(item => ({
+        productId: item.productId,
+        sellerId: item.sellerId,
+        subtotal: item.subtotal
+      }))
+    );
+
+    if (result.valid && result.discount) {
+      setAppliedDiscount(result.discount);
+      setDiscountError(null);
+      // Re-fetch totals with discount
+      const res = await calculateCheckoutTotals(
+        items.map((i) => ({
+          productId: i.productId,
+          variantId: i.variantId,
+          quantity: i.quantity,
+        })),
+        result.discount.code
+      );
+      if (res.ok && res.data) {
+        setTotals(res.data);
+      }
+    } else {
+      setDiscountError(result.error || "Invalid discount code");
+      setAppliedDiscount(null);
+    }
+
+    setDiscountValidating(false);
+  };
+
+  const handleRemoveDiscount = async () => {
+    setAppliedDiscount(null);
+    setDiscountCode("");
+    setDiscountError(null);
+    // Re-fetch totals without discount
+    const res = await calculateCheckoutTotals(
+      items.map((i) => ({
+        productId: i.productId,
+        variantId: i.variantId,
+        quantity: i.quantity,
+      }))
+    );
+    if (res.ok && res.data) {
+      setTotals(res.data);
+    }
   };
 
   const handleCheckout = async () => {
@@ -170,7 +239,7 @@ export default function PremiumCheckout({
 
       // 2. Handle Razorpay (Order creation AFTER payment)
       if (paymentMethod === "razorpay") {
-        const intentRes = await createRazorpayIntent(checkoutItems);
+        const intentRes = await createRazorpayIntent(checkoutItems, appliedDiscount?.code);
         
         if (intentRes.ok && intentRes.razorpay) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -200,6 +269,7 @@ export default function PremiumCheckout({
                 addressId: finalAddressId!,
                 guestEmail: formData.email,
                 guestPhone: formData.phone,
+                discountCode: appliedDiscount?.code,
               });
 
               if (finalRes.ok && finalRes.orderIds) {
@@ -239,6 +309,7 @@ export default function PremiumCheckout({
           paymentMethod: "cod",
           guestEmail: formData.email,
           guestPhone: formData.phone,
+          discountCode: appliedDiscount?.code,
         });
 
         if (res.ok && res.orderIds) {
@@ -617,6 +688,67 @@ export default function PremiumCheckout({
                         <span>₹{totals.platformFee.toLocaleString("en-IN")}</span>
                       </div>
                   )}
+                  
+                  {/* Discount Code Section */}
+                  <div className="border-t border-gray-200 pt-4 space-y-3">
+                    {!appliedDiscount ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Have a discount code?
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={discountCode}
+                            onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                            placeholder="Enter code"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-200 focus:border-orange-400 outline-none text-sm uppercase"
+                          />
+                          <button
+                            onClick={handleApplyDiscount}
+                            disabled={discountValidating || !discountCode.trim()}
+                            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all"
+                          >
+                            {discountValidating ? "Checking..." : "Apply"}
+                          </button>
+                        </div>
+                        {discountError && (
+                          <p className="text-xs text-red-600 mt-1">{discountError}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="flex items-center gap-2">
+                          <Check className="w-4 h-4 text-green-600" />
+                          <div>
+                            <p className="text-sm font-semibold text-green-800">
+                              {appliedDiscount.code}
+                            </p>
+                            <p className="text-xs text-green-600">
+                              {appliedDiscount.type === "percentage"
+                                ? `${appliedDiscount.value}% off`
+                                : `₹${appliedDiscount.value} off`}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleRemoveDiscount}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Discount Amount Display */}
+                  {totals && totals.discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600 font-medium">
+                      <span>Discount Applied</span>
+                      <span>-₹{totals.discountAmount.toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  
                   <div className="border-t border-gray-200 pt-3 flex justify-between text-lg font-bold text-gray-800">
                     <span>Total</span>
                     <span className="text-orange-600">₹{totals.total.toLocaleString("en-IN")}</span>

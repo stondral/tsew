@@ -1,36 +1,42 @@
 import type { CollectionConfig } from "payload"
 import { getEmailTemplate, generateOrderItemRows, formatCurrency } from "@/lib/email-templates"
+import { getSellersWithPermission } from "@/lib/rbac/permissions"
 
 export const Orders: CollectionConfig = {
   slug: "orders",
 
   access: {
-    read: ({ req }) => {
+    read: async ({ req }) => {
       if (!req.user) return false;
       const user = req.user as any;
       if (user.role === "admin") return true;
-      if (user.role === "seller") {
-        return {
-          seller: { equals: user.id },
-        } as any;
-      }
+      
+      // Get sellers where user has order.view permission
+      const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'order.view');
+      
       return {
-        user: { equals: user.id },
+        or: [
+          { user: { equals: user.id } }, // Buyer: their own orders
+          { seller: { in: allowedSellers } } // Seller/Team: for their organization
+        ]
       } as any;
     },
 
     create: ({ req }) => Boolean(req.user),
 
-    update: ({ req }) => {
+    update: async ({ req }) => {
       if (!req.user) return false;
       const user = req.user as any;
       if (user.role === "admin") return true;
-      if (user.role === "seller") {
-        return {
-          seller: { equals: user.id },
-        } as any;
-      }
-      return false;
+      
+      // Get sellers where user has permission to update orders
+      const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'order.update_status');
+      
+      if (allowedSellers.length === 0) return false;
+
+      return {
+        seller: { in: allowedSellers }
+      } as any;
     },
 
     delete: ({ req }) => (req.user as any)?.role === "admin",
@@ -69,23 +75,18 @@ export const Orders: CollectionConfig = {
       defaultValue: "PENDING",
       options: [
         { label: "Pending", value: "PENDING" },
-        { label: "Pending", value: "pending" },
         { label: "Accepted", value: "ACCEPTED" },
         { label: "Processing", value: "PROCESSING" },
-        { label: "Processing", value: "processing" },
         { label: "Shipped", value: "SHIPPED" },
-        { label: "Shipped", value: "shipped" },
         { label: "Delivered", value: "DELIVERED" },
-        { label: "Delivered", value: "delivered" },
         { label: "Cancelled", value: "CANCELLED" },
-        { label: "Cancelled", value: "cancelled" },
       ],
     },
 
     {
       name: "seller",
       type: "relationship",
-      relationTo: "users",
+      relationTo: "sellers" as any,
       required: true,
       admin: { position: "sidebar" },
     },
@@ -123,7 +124,7 @@ export const Orders: CollectionConfig = {
         { 
           name: "seller", 
           type: "relationship", 
-          relationTo: "users", 
+          relationTo: "sellers" as any, 
           required: true,
           admin: { readOnly: true }
         },
@@ -131,20 +132,15 @@ export const Orders: CollectionConfig = {
           name: "status",
           type: "select",
           defaultValue: "PENDING",
-      options: [
-        { label: "Pending", value: "PENDING" },
-        { label: "Pending", value: "pending" },
-        { label: "Accepted", value: "ACCEPTED" },
-        { label: "Processing", value: "PROCESSING" },
-        { label: "Processing", value: "processing" },
-        { label: "Shipped", value: "SHIPPED" },
-        { label: "Shipped", value: "shipped" },
-        { label: "Delivered", value: "DELIVERED" },
-        { label: "Delivered", value: "delivered" },
-        { label: "Cancelled", value: "CANCELLED" },
-        { label: "Cancelled", value: "cancelled" },
-      ],
-    },
+          options: [
+            { label: "Pending", value: "PENDING" },
+            { label: "Accepted", value: "ACCEPTED" },
+            { label: "Processing", value: "PROCESSING" },
+            { label: "Shipped", value: "SHIPPED" },
+            { label: "Delivered", value: "DELIVERED" },
+            { label: "Cancelled", value: "CANCELLED" },
+          ],
+        },
       ],
     },
 
@@ -175,6 +171,54 @@ export const Orders: CollectionConfig = {
     },
 
     {
+      name: "discountCode",
+      type: "text",
+      admin: {
+        description: "Discount code applied to this order",
+        position: "sidebar",
+      },
+    },
+    {
+      name: "discountSource",
+      type: "select",
+      options: [
+        { label: "Store", value: "store" },
+        { label: "Seller", value: "seller" },
+      ],
+      admin: {
+        position: "sidebar",
+      },
+    },
+    {
+      name: "discountType",
+      type: "select",
+      options: [
+        { label: "Percentage", value: "percentage" },
+        { label: "Fixed Amount", value: "fixed" },
+      ],
+      admin: {
+        position: "sidebar",
+      },
+    },
+    {
+      name: "discountValue",
+      type: "number",
+      admin: {
+        description: "Original discount value (percentage or fixed amount)",
+        position: "sidebar",
+      },
+    },
+    {
+      name: "discountAmount",
+      type: "number",
+      defaultValue: 0,
+      admin: {
+        description: "Actual discount amount deducted from order total",
+        position: "sidebar",
+      },
+    },
+
+    {
       name: "paymentMethod",
       type: "select",
       required: true,
@@ -200,7 +244,6 @@ export const Orders: CollectionConfig = {
       name: "checkoutId",
       type: "text",
       index: true,
-      // Used for grouping multiple orders from the same checkout (split by seller)
     },
     {
       name: "razorpayPaymentId",
@@ -250,7 +293,8 @@ export const Orders: CollectionConfig = {
             data.subtotal +
             (data.shippingCost || 0) +
             (data.gst || 0) +
-            (data.platformFee || 0)
+            (data.platformFee || 0) -
+            (data.discountAmount || 0)
         }
 
         return data
@@ -260,10 +304,7 @@ export const Orders: CollectionConfig = {
       async ({ doc, previousDoc, operation, req }) => {
         const { payload } = req;
         
-        // --- 1. STOCK UPDATES ---
-        // Condition A: New COD order or New PAID order
         const isNewSuccess = operation === 'create' && (doc.paymentMethod === 'cod' || doc.paymentStatus === 'paid');
-        // Condition B: Payment transitioned to 'paid'
         const isPaidNow = operation === 'update' && doc.paymentStatus === 'paid' && previousDoc?.paymentStatus === 'pending';
 
         if (isNewSuccess || isPaidNow) {
@@ -271,14 +312,12 @@ export const Orders: CollectionConfig = {
           
           for (const item of doc.items) {
             try {
-              // Group by seller for notifications later
               const sellerId = typeof item.seller === 'string' ? item.seller : item.seller?.id;
               if (sellerId) {
                 if (!sellerItemsMap[sellerId]) sellerItemsMap[sellerId] = [];
                 sellerItemsMap[sellerId].push(item);
               }
 
-              // Fetch product for stock update and low stock check
               const product = await (payload as any).findByID({
                 collection: 'products',
                 id: item.productId,
@@ -309,26 +348,32 @@ export const Orders: CollectionConfig = {
                 });
               }
 
-              // --- 2. LOW STOCK ALERT ---
               if (newStock < 5) {
-                const seller = await (payload as any).findByID({
-                  collection: 'users',
+                // Fetch owner of the seller organization
+                const sellerOrg = await (payload as any).findByID({
+                  collection: 'sellers' as any,
                   id: sellerId,
                 });
 
-                if (seller) {
-                  const lowStockHtml = getEmailTemplate('low-stock-alert', {
-                    productName: product.name,
-                    currentStock: newStock.toString(),
-                    variantInfo: item.variantId ? `<p style="margin: 4px 0 0 0; color: #ef4444; font-size: 14px; font-weight: 600;">Variant: ${item.productName.split('(')[1]?.replace(')', '') || 'Selected variant'}</p>` : '',
-                    restockLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/seller/products/${product.id}`
-                  });
+                if (sellerOrg && sellerOrg.owner) {
+                   const owner = typeof sellerOrg.owner === 'string' 
+                     ? await (payload as any).findByID({ collection: 'users', id: sellerOrg.owner })
+                     : sellerOrg.owner;
 
-                  await payload.sendEmail({
-                    to: seller.email,
-                    subject: `⚠️ Low Stock Alert: ${product.name}`,
-                    html: lowStockHtml,
-                  });
+                   if (owner) {
+                    const lowStockHtml = getEmailTemplate('low-stock-alert', {
+                      productName: product.name,
+                      currentStock: newStock.toString(),
+                      variantInfo: item.variantId ? `<p style="margin: 4px 0 0 0; color: #ef4444; font-size: 14px; font-weight: 600;">Variant: ${item.productName.split('(')[1]?.replace(')', '') || 'Selected variant'}</p>` : '',
+                      restockLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/seller/products/${product.id}`
+                    });
+
+                    await payload.sendEmail({
+                      to: owner.email,
+                      subject: `⚠️ Low Stock Alert: ${product.name}`,
+                      html: lowStockHtml,
+                    });
+                   }
                 }
               }
             } catch (err) {
@@ -336,7 +381,7 @@ export const Orders: CollectionConfig = {
             }
           }
 
-          // --- 3. BUYER CONFIRMATION ---
+          // Buyer Confirmation
           try {
             const buyer = await (payload as any).findByID({
               collection: 'users',
@@ -361,8 +406,8 @@ export const Orders: CollectionConfig = {
                 total: formatCurrency(doc.total),
                 paymentMethod: doc.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (Prepaid)',
                 deliveryEta: '5-7 Business Days',
-                orderLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/orders/${doc.id}`,
-                supportLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/contact`
+                orderLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/orders/${doc.id}`,
+                supportLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/contact`
               });
 
               await payload.sendEmail({
@@ -375,39 +420,45 @@ export const Orders: CollectionConfig = {
             console.error('Buyer Confirmation Email Error:', err);
           }
 
-          // --- 4. SELLER NOTIFICATIONS ---
+          // Seller Notifications (to owner of organization)
           for (const [sellerId, items] of Object.entries(sellerItemsMap)) {
             try {
-              const seller = await (payload as any).findByID({
-                collection: 'users',
+              const sellerOrg = await (payload as any).findByID({
+                collection: 'sellers' as any,
                 id: sellerId,
               });
 
-              const address = typeof doc.shippingAddress === 'string' 
-                ? await (payload as any).findByID({ collection: 'addresses', id: doc.shippingAddress })
-                : doc.shippingAddress;
+              if (sellerOrg && sellerOrg.owner) {
+                const owner = typeof sellerOrg.owner === 'string' 
+                   ? await (payload as any).findByID({ collection: 'users', id: sellerOrg.owner })
+                   : sellerOrg.owner;
 
-              if (seller) {
-                const sellerItemsTable = generateOrderItemRows(items.map((i: any) => ({
-                  name: i.productName,
-                  image: i.productImage,
-                  quantity: i.quantity,
-                  price: i.priceAtPurchase,
-                  variant: i.variantId ? i.productName.split('(')[1]?.replace(')', '') : null
-                })));
+                const address = typeof doc.shippingAddress === 'string' 
+                  ? await (payload as any).findByID({ collection: 'addresses', id: doc.shippingAddress })
+                  : doc.shippingAddress;
 
-                const sellerHtml = getEmailTemplate('seller-order-notification', {
-                  location: address ? `${address.city}, ${address.pincode}` : 'Not provided',
-                  paymentStatus: doc.paymentStatus === 'paid' ? '✅ Paid' : '⏳ COD - Collect Cash',
-                  sellerItemsTable,
-                  orderLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.stondemporium.tech'}/seller/orders/${doc.id}`
-                });
+                if (owner) {
+                  const sellerItemsTable = generateOrderItemRows(items.map((i: any) => ({
+                    name: i.productName,
+                    image: i.productImage,
+                    quantity: i.quantity,
+                    price: i.priceAtPurchase,
+                    variant: i.variantId ? i.productName.split('(')[1]?.replace(')', '') : null
+                  })));
 
-                await payload.sendEmail({
-                  to: seller.email,
-                  subject: `🆕 New Order Received | #${doc.orderNumber}`,
-                  html: sellerHtml,
-                });
+                  const sellerHtml = getEmailTemplate('seller-order-notification', {
+                    location: address ? `${address.city}, ${address.pincode}` : 'Not provided',
+                    paymentStatus: doc.paymentStatus === 'paid' ? '✅ Paid' : '⏳ COD - Collect Cash',
+                    sellerItemsTable,
+                    orderLink: `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/seller/orders/${doc.id}`
+                  });
+
+                  await payload.sendEmail({
+                    to: owner.email,
+                    subject: `🆕 New Order Received | #${doc.orderNumber}`,
+                    html: sellerHtml,
+                  });
+                }
               }
             } catch (err) {
               console.error(`Seller Notification Error (${sellerId}):`, err);

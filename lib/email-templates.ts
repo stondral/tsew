@@ -12,7 +12,8 @@ export function getEmailTemplate(
     | 'order-confirmation'
     | 'seller-order-notification'
     | 'low-stock-alert'
-    | 'seller-welcome',
+    | 'seller-welcome'
+    | 'team-invite',
   replacements: Record<string, string>
 ): string {
   const templatePath = path.join(process.cwd(), 'email-templates', `${templateName}.html`);

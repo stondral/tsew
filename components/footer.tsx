@@ -46,7 +46,7 @@ export default function Footer() {
             </h4>
             <div className="space-y-3">
               <a
-                href="mailto:customercare@stondemporium.tech"
+                href={`mailto:customercare@${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost'}`}
                 className="flex items-center gap-3 text-gray-700 hover:text-orange-500 transition-colors group"
               >
                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center group-hover:bg-orange-500 transition-colors">
@@ -55,7 +55,7 @@ export default function Footer() {
                 <div>
                   <p className="text-sm font-medium">Email Us</p>
                   <p className="text-xs text-gray-500">
-                    customercare@stondemporium.tech
+                    customercare@{process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost'}
                   </p>
                 </div>
               </a>

@@ -13,11 +13,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import loginImage from "@/assets/loginpage.png";
+import { useAuth } from "@/components/auth/AuthContext";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
+  const { refresh } = useAuth();
 
   const verificationInFlightRef = useRef(false);
   const completedTokenRef = useRef<string | null>(null);
@@ -26,6 +28,7 @@ function VerifyEmailContent() {
     "loading",
   );
   const [message, setMessage] = useState("");
+  const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -54,9 +57,27 @@ function VerifyEmailContent() {
         });
 
         if (response.ok) {
+          const data = await response.json();
           completedTokenRef.current = token;
           setStatus("success");
           setMessage("Your email has been verified successfully!");
+
+          // ✅ Auto-login if token is provided
+          if (data.autoLogin && data.token) {
+            setIsAutoLoggingIn(true);
+            setMessage("Logging you in automatically...");
+            
+            // Store the token
+            localStorage.setItem("payload-token", data.token);
+            
+            // Refresh auth context to load user data
+            await refresh();
+            
+            // Redirect to home page after a brief delay
+            setTimeout(() => {
+              router.push("/");
+            }, 1500);
+          }
         } else {
           const data = await response.json();
           setStatus("error");
@@ -80,7 +101,7 @@ function VerifyEmailContent() {
       controller.abort();
       verificationInFlightRef.current = false;
     };
-  }, [token]);
+  }, [token, refresh, router]);
 
   return (
     <Card className="w-full max-w-md shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
@@ -104,7 +125,7 @@ function VerifyEmailContent() {
         </div>
         <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
           {status === "loading" && "Verifying Email..."}
-          {status === "success" && "Email Verified!"}
+          {status === "success" && (isAutoLoggingIn ? "Logging You In..." : "Email Verified!")}
           {status === "error" && "Verification Failed"}
         </CardTitle>
         <CardDescription className="text-gray-500">
@@ -113,7 +134,7 @@ function VerifyEmailContent() {
       </CardHeader>
 
       <CardContent className="pt-4">
-        {status === "success" && (
+        {status === "success" && !isAutoLoggingIn && (
           <div className="space-y-4">
             <p className="text-center text-gray-600">
               You can now sign in to your account and start shopping!
@@ -124,6 +145,15 @@ function VerifyEmailContent() {
             >
               Sign In
             </Button>
+          </div>
+        )}
+
+        {status === "success" && isAutoLoggingIn && (
+          <div className="flex justify-center py-4">
+            <div className="flex items-center gap-2 text-green-600">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Redirecting to home page...</span>
+            </div>
           </div>
         )}
 
@@ -159,7 +189,6 @@ function VerifyEmailContent() {
     </Card>
   );
 }
-
 // ✅ WRAPPER: Handles the Suspense boundary required for useSearchParams
 export default function VerifyEmailPage() {
   return (

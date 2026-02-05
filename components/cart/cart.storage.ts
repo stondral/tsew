@@ -40,3 +40,12 @@ export function saveCart(cart: CartClient) {
     console.error("🛒 Error saving cart:", error);
   }
 }
+
+export function clearCart() {
+  try {
+    console.log("🛒 Clearing cart from localStorage");
+    localStorage.removeItem(CART_KEY);
+  } catch (error) {
+    console.error("🛒 Error clearing cart:", error);
+  }
+}

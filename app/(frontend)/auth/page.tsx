@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,10 @@ import { ArrowLeft, Loader2, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import loginImage from "@/assets/loginpage.png";
 import logoston from "@/components/logoston.png";
 
-export default function AuthPage() {
+function AuthContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/";
   const { login, register, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 
@@ -48,9 +50,9 @@ export default function AuthPage() {
   // Redirect if already authenticated (use useEffect to avoid setState during render)
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/");
+      router.push(redirectPath);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, redirectPath]);
 
   // --- Handlers ---
 
@@ -61,7 +63,7 @@ export default function AuthPage() {
 
     try {
       await login(loginEmail, loginPassword);
-      router.push("/");
+      router.push(redirectPath);
     } catch (err: unknown) {
       const errorMessage = (err as Error).message || "Login failed. Please check your credentials.";
       
@@ -114,11 +116,11 @@ export default function AuthPage() {
       // Registration success
       setViewState("register-success");
     } catch (err: unknown) {
-      // Registration succeeded (since POST /api/users returned 201 and email was sent)
-      // Auto-login fails due to unverified email, but that's expected behavior
-      // Always show success state to prompt user to verify their email
-      console.log("Registration completed, showing verification screen:", err);
-      setViewState("register-success");
+      // AuthContext.register now throws ONLY on registration failures (e.g. validtion, duplicate).
+      // If auto-login fails due to unverified email, it is swallowed there.
+      const errorMessage = (err as Error).message || "Registration failed. Please try again.";
+      console.error("Registration error:", errorMessage);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -363,9 +365,44 @@ export default function AuthPage() {
                     </div>
 
                     {error && (
-                      <p className="text-sm text-red-500 text-center">
-                        {error}
-                      </p>
+                      <div className="space-y-2 text-center">
+                          <p className="text-sm text-red-500">{error}</p>
+                          {/* Explicit Resend Button if error seems to be about verification OR generic auth failure */}
+                          {(error.toLowerCase().includes("verify") || 
+                            error.toLowerCase().includes("unverified") || 
+                            error.toLowerCase().includes("authentication failed")) && (
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-xs w-full border-orange-200 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                onClick={async () => {
+                                    setIsLoading(true);
+                                    try {
+                                        const response = await fetch("/api/users/verify-resend", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ email: loginEmail }),
+                                        });
+
+                                        if (response.ok) {
+                                            setRegisterEmail(loginEmail);
+                                            setViewState("register-success");
+                                        } else {
+                                            const data = await response.json();
+                                            setError(data.message || "Failed to resend email.");
+                                        }
+                                    } catch {
+                                        setError("Network error. Please try again.");
+                                    } finally {
+                                        setIsLoading(false);
+                                    }
+                                }}
+                              >
+                                  Resend Verification Email
+                              </Button>
+                          )}
+                      </div>
                     )}
 
                     <Button
@@ -522,5 +559,20 @@ export default function AuthPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
+          <p className="text-gray-500 font-bold animate-pulse">Initializing Secure Portal...</p>
+        </div>
+      </div>
+    }>
+      <AuthContent />
+    </Suspense>
   );
 }

@@ -24,6 +24,12 @@ export interface CalculationResult {
   shipping: number;
   tax: number;
   platformFee: number; // From createCheckout logic
+  discountAmount: number;
+  discountCode?: string;
+  discountType?: "percentage" | "fixed";
+  discountValue?: number;
+  discountSource?: "store" | "seller";
+  discountSellerId?: string;
   total: number;
   isStockProblem: boolean;
   stockErrors: string[]; // Details about which items are out of stock
@@ -32,11 +38,13 @@ export interface CalculationResult {
 /**
  * reliableCheckoutCalculation
  * Single source of truth for all checkout math.
+ * IMPORTANT: Discount code is revalidated server-side at every call
  */
 export async function calculateCartTotals(
   items: CartItemInput[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: any
+  payload: any,
+  discountCode?: string
 ): Promise<CalculationResult> {
   const calculatedItems: CalculatedItem[] = [];
   const stockErrors: string[] = [];
@@ -123,7 +131,97 @@ export async function calculateCartTotals(
   // 3. Platform Fee: Flat 15 (from createCheckout legacy)
   const platformFee = 15;
 
-  const total = subtotal + shipping + tax + platformFee;
+  // 4. Discount Code Validation & Application (SERVER-SIDE REVALIDATION)
+  let discountAmount = 0;
+  let appliedDiscountCode: string | undefined;
+  let discountType: "percentage" | "fixed" | undefined;
+  let discountValue: number | undefined;
+  let discountSource: "store" | "seller" | undefined;
+  let discountSellerId: string | undefined;
+
+  if (discountCode && discountCode.trim()) {
+    try {
+      // Server-side validation at every payment checkpoint
+      const discounts = await payload.find({
+        collection: "discount-codes",
+        where: {
+          code: { equals: discountCode.toUpperCase().trim() },
+          isActive: { equals: true },
+        },
+        limit: 1,
+      });
+
+      if (discounts.docs.length > 0) {
+        const discount = discounts.docs[0];
+        const now = new Date();
+        
+        // Validate expiration
+        if (discount.expiresAt && new Date(discount.expiresAt) < now) {
+          stockErrors.push("Discount code has expired");
+          isStockProblem = true;
+        }
+        // Validate usage limit
+        else if (discount.usageLimit && discount.usedCount >= discount.usageLimit) {
+          stockErrors.push("Discount code usage limit reached");
+          isStockProblem = true;
+        }
+        else {
+          const source = discount.discountSource || "store";
+          const sellerId = source === "seller" ? (typeof discount.seller === 'string' ? discount.seller : discount.seller?.id) : undefined;
+          
+          // For seller discounts, calculate based ONLY on that seller's items
+          let applicableSubtotal = subtotal;
+          if (source === "seller" && sellerId) {
+            applicableSubtotal = calculatedItems
+              .filter(item => item.sellerId === sellerId)
+              .reduce((sum, item) => sum + item.subtotal, 0);
+
+            if (applicableSubtotal === 0) {
+              stockErrors.push("This discount code is not applicable to any items in your cart");
+              isStockProblem = true;
+            }
+          }
+
+          // Validate minimum order value against applicable subtotal
+          if (!isStockProblem && discount.minOrderValue && applicableSubtotal < discount.minOrderValue) {
+            const context = source === "seller" ? "from this seller " : "";
+            stockErrors.push(`Minimum order value of ₹${discount.minOrderValue} ${context}required for this discount`);
+            isStockProblem = true;
+          }
+
+          // Apply discount if everything is still fine
+          if (!isStockProblem) {
+            appliedDiscountCode = discount.code;
+            discountType = discount.type;
+            discountValue = discount.value;
+            discountSource = source;
+            discountSellerId = sellerId;
+
+            if (discount.type === "percentage") {
+              discountAmount = (applicableSubtotal * discount.value) / 100;
+              // Apply max discount cap if specified
+              if (discount.maxDiscount && discountAmount > discount.maxDiscount) {
+                discountAmount = discount.maxDiscount;
+              }
+            } else if (discount.type === "fixed") {
+              discountAmount = Math.min(discount.value, applicableSubtotal); // Can't exceed applicable subtotal
+            }
+            
+            discountAmount = Math.round(discountAmount * 100) / 100; // Round to 2 decimals
+          }
+        }
+      } else {
+        stockErrors.push("Invalid discount code");
+        isStockProblem = true;
+      }
+    } catch (err) {
+      console.error("Discount validation error:", err);
+      stockErrors.push("Failed to validate discount code");
+      isStockProblem = true;
+    }
+  }
+
+  const total = subtotal + shipping + tax + platformFee - discountAmount;
 
   return {
     items: calculatedItems,
@@ -131,6 +229,12 @@ export async function calculateCartTotals(
     shipping,
     tax,
     platformFee,
+    discountAmount,
+    discountCode: appliedDiscountCode,
+    discountType,
+    discountValue,
+    discountSource,
+    discountSellerId,
     total,
     isStockProblem,
     stockErrors,

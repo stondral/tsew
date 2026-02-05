@@ -27,7 +27,7 @@ export default function Cart() {
     if (!isAuthenticated) {
       // Redirect to login page with return URL to checkout
       setIsOpen(false);
-      router.push("/auth/login?redirect=/checkout");
+      router.push("/auth?redirect=/checkout");
       return;
     }
     

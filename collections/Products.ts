@@ -1,4 +1,5 @@
 import type { CollectionConfig, CollectionSlug } from 'payload'
+import { getSellersWithPermission, hasPermission } from '@/lib/rbac/permissions'
 
 export const Products: CollectionConfig = {
   slug: 'products',
@@ -14,7 +15,7 @@ export const Products: CollectionConfig = {
   ───────────────────────────── */
 
   access: {
-    read: ({ req }) => {
+    read: async ({ req }) => {
       // Public storefront
       if (!req.user) {
         return {
@@ -24,50 +25,67 @@ export const Products: CollectionConfig = {
       }
 
       const role = (req.user as any).role
-
-      // Admin sees everything
       if (role === 'admin') return true
 
-      // Seller sees ONLY their products
-      if (role === 'seller') {
+      // Sellers/Employees with product.view permission
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'product.view')
+      
+      if (allowedSellers.length > 0) {
         return {
-          seller: { equals: req.user.id },
+          or: [
+            {
+              and: [
+                { status: { equals: 'live' } },
+                { isActive: { equals: true } },
+              ]
+            },
+            {
+              seller: { in: allowedSellers }
+            }
+          ]
         } as any
       }
 
-      // Logged-in buyers
+      // Default: only live products
       return {
         status: { equals: 'live' },
         isActive: { equals: true },
       } as any
     },
 
-    create: ({ req }) =>
-      (req.user as any)?.role === 'seller' ||
-      (req.user as any)?.role === 'admin',
-
-    update: ({ req }) => {
-      if ((req.user as any)?.role === 'admin') return true
-
-      if ((req.user as any)?.role === 'seller') {
-        return {
-          seller: { equals: req.user!.id },
-        } as any
-      }
-
-      return false
+    create: async ({ req }) => {
+      if (!req.user) return false
+      if ((req.user as any).role === 'admin') return true
+      
+      // Need a way to check if they have permission for AT LEAST ONE seller
+      // but 'create' access doesn't know which seller they are creating for yet (that's in data)
+      // So we return true if they are a 'seller' or have membership in any org with product.create
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'product.create')
+      return allowedSellers.length > 0
     },
 
-    delete: ({ req }) => {
-      if ((req.user as any)?.role === 'admin') return true
+    update: async ({ req }) => {
+      if (!req.user) return false
+      if ((req.user as any).role === 'admin') return true
 
-      if ((req.user as any)?.role === 'seller') {
-        return {
-          seller: { equals: req.user!.id },
-        } as any
-      }
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'product.edit')
+      if (allowedSellers.length === 0) return false
 
-      return false
+      return {
+        seller: { in: allowedSellers },
+      } as any
+    },
+
+    delete: async ({ req }) => {
+      if (!req.user) return false
+      if ((req.user as any).role === 'admin') return true
+
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'product.delete')
+      if (allowedSellers.length === 0) return false
+
+      return {
+        seller: { in: allowedSellers },
+      } as any
     },
   },
 
@@ -78,10 +96,16 @@ export const Products: CollectionConfig = {
   hooks: {
     beforeChange: [
       // Auto-assign seller + enforce pending state
-      ({ req, data, operation }) => {
-        if (operation === 'create' && (req.user as any)?.role === 'seller') {
-          data.seller = req.user!.id
-          data.status = 'pending'
+      async ({ req, data, operation }) => {
+        if (operation === 'create' && req.user) {
+          // Non-admins must always have their products start as pending
+          if ((req.user as any)?.role !== 'admin') {
+            data.status = 'pending'
+          }
+          
+          // If seller is not provided, we don't auto-assign to the user ID anymore
+          // because seller relationship points to a 'sellers' collection doc, not a 'users' doc.
+          // The frontend should provide the correct seller ID.
         }
 
         // Auto-generate slug
@@ -265,12 +289,20 @@ export const Products: CollectionConfig = {
     {
       name: 'seller',
       type: 'relationship',
-      relationTo: 'users',
+      relationTo: 'sellers' as any,
       required: true,
       admin: {
         position: 'sidebar',
-        readOnly: true,
       },
+    },
+    {
+        name: 'createdBy',
+        type: 'relationship',
+        relationTo: 'users',
+        admin: {
+            readOnly: true,
+            position: 'sidebar',
+        }
     },
 
     {

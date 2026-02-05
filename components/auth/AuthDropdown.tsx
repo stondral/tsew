@@ -69,6 +69,8 @@ export default function AuthDropdown() {
         return "Administrator";
       case "seller":
         return "Seller Account";
+      case "sellerEmployee":
+        return "Team Member";
       default:
         return "Member";
     }
@@ -159,7 +161,7 @@ export default function AuthDropdown() {
             </DropdownMenuItem>
           </DropdownMenuGroup>
 
-          {(user?.role === "seller" || user?.role === "admin") && (
+          {(user?.role === "seller" || user?.role === "admin" || user?.role === "sellerEmployee") && (
             <>
               <DropdownMenuSeparator className="my-2" />
               <DropdownMenuGroup>

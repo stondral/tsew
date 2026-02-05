@@ -72,13 +72,14 @@ export async function POST(req: NextRequest) {
       const verifyConfig = userConfig.auth && typeof userConfig.auth === 'object' ? userConfig.auth.verify : null;
       const htmlGenerator = typeof verifyConfig === 'object' && verifyConfig ? verifyConfig.generateEmailHTML : null;
       
+      const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'
       const html = htmlGenerator 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ? (htmlGenerator as any)({ token, user })
-        : `<p>Please verify your email by clicking <a href="${process.env.NEXT_PUBLIC_FRONTEND_URL}/auth/verify?token=${token}">here</a>.</p>`;
+        : `<p>Please verify your email by clicking <a href="${frontendUrl}/auth/verify?token=${token}">here</a>.</p>`;
 
       await payload.sendEmail({
-        from: process.env.SMTP_FROM_EMAIL || "noreply@stondemporium.tech",
+        from: process.env.SMTP_FROM_EMAIL || "noreply@localhost",
         to: email,
         subject: "Verify your Stondemporium account",
         html: html as string,

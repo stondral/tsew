@@ -36,17 +36,26 @@ export async function GET() {
     headers: requestHeaders,
   });
 
-  if (!user || ((user as User).role !== "seller" && (user as User).role !== "admin")) {
+  if (!user || ((user as User).role !== "seller" && (user as User).role !== "admin" && (user as User).role !== "sellerEmployee")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Get sellers where user has product.view permission
+  const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+  const allowedSellers = await getSellersWithPermission(payload, user.id, 'product.view');
+
+  if (allowedSellers.length === 0 && (user as User).role !== 'admin') {
+    return NextResponse.json({ error: "No seller organizations found" }, { status: 403 });
   }
 
   // Fetch products to get counts and IDs
   const productsRes = await payload.find({
     collection: "products" as never,
-    where: {
-      seller: { equals: user.id },
+    where: (user as User).role === 'admin' ? {} : {
+      seller: { in: allowedSellers },
     },
     limit: 100,
+    overrideAccess: true,
   }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const sellerProducts = productsRes.docs as Product[];
@@ -68,6 +77,7 @@ export async function GET() {
     limit: 100,
     sort: "-orderDate",
     depth: 2,
+    overrideAccess: true,
   }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 
@@ -106,7 +116,7 @@ export async function GET() {
 
     order.items.forEach((item) => {
       const itemSellerId = typeof item.seller === 'string' ? item.seller : item.seller?.id;
-      if (itemSellerId === user.id || sellerProductIds.includes(item.productId)) {
+      if ((user as User).role === 'admin' || allowedSellers.includes(itemSellerId as string) || sellerProductIds.includes(item.productId)) {
         const itemRevenue = (item.priceAtPurchase || 0) * (item.quantity || 0);
         
         if (isCurrentWeek) {

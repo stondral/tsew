@@ -16,6 +16,7 @@ type CheckoutIntent = {
   paymentMethod: "razorpay" | "cod";
   guestEmail?: string;
   guestPhone?: string;
+  discountCode?: string;
 };
 
 export async function createCheckout(intent: CheckoutIntent) {
@@ -51,12 +52,13 @@ export async function createCheckout(intent: CheckoutIntent) {
   const orderGuestPhone = intent.guestPhone || address.phone;
 
   // 2️⃣ Calculate Totals & Validate Stock (Shared Logic)
+  // IMPORTANT: Server-side discount revalidation happens here
   const cleanItems = intent.items.map(i => ({
     ...i,
     variantId: i.variantId || null
   }));
 
-  const calculation = await calculateCartTotals(cleanItems, payload);
+  const calculation = await calculateCartTotals(cleanItems, payload, intent.discountCode);
 
   if (calculation.isStockProblem) {
     return { 
@@ -116,8 +118,20 @@ export async function createCheckout(intent: CheckoutIntent) {
       // Proportional tax
       const sellerTax = Math.round((sellerSubtotal / calculation.subtotal) * calculation.tax);
       
+      // Proportional discount distribution
+      let sellerDiscount = 0;
+      if (calculation.discountAmount > 0) {
+        if (calculation.discountSource === "seller") {
+          // If it's a seller discount, it only applies to THAT seller's order
+          sellerDiscount = calculation.discountSellerId === sellerId ? calculation.discountAmount : 0;
+        } else {
+          // Store-wide discount is distributed pro-rata
+          sellerDiscount = Math.round((sellerSubtotal / calculation.subtotal) * calculation.discountAmount);
+        }
+      }
+      
       // Calculate seller total
-      const sellerTotal = sellerSubtotal + sellerShipping + sellerTax + sellerPlatformFee;
+      const sellerTotal = sellerSubtotal + sellerShipping + sellerTax + sellerPlatformFee - sellerDiscount;
       
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const order = await (payload as any).create({
@@ -136,12 +150,43 @@ export async function createCheckout(intent: CheckoutIntent) {
           shippingCost: sellerShipping,
           gst: sellerTax,
           platformFee: sellerPlatformFee,
+          discountCode: calculation.discountCode,
+          discountSource: calculation.discountSource,
+          discountType: calculation.discountType,
+          discountValue: calculation.discountValue,
+          discountAmount: sellerDiscount,
           total: sellerTotal,
           // Don't set razorpayOrderId here - it will be set in finaliseRazorpayCheckout for Razorpay payments
         },
       });
       
       createdOrderIds.push(order.id);
+    }
+    
+    // 6️⃣ Increment discount code usage count (only after all orders created successfully)
+    if (calculation.discountCode) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const discounts = await (payload as any).find({
+          collection: "discount-codes",
+          where: { code: { equals: calculation.discountCode } },
+          limit: 1,
+        });
+        
+        if (discounts.docs.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (payload as any).update({
+            collection: "discount-codes",
+            id: discounts.docs[0].id,
+            data: {
+              usedCount: (discounts.docs[0].usedCount || 0) + 1,
+            },
+          });
+        }
+      } catch (err) {
+        console.error("Failed to increment discount usage:", err);
+        // Don't fail the order if usage count update fails
+      }
     }
     
     return {

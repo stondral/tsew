@@ -16,6 +16,11 @@ import { Orders } from "./collections/Orders";
 import { Addresses } from "./collections/Addresses";
 import { Feedback } from "./collections/Feedback";
 import { Warehouses } from "./collections/Warehouses";
+import { DiscountCodes } from "./collections/DiscountCodes";
+import { Sellers } from "./collections/Sellers";
+import { SellerMembers } from "./collections/SellerMembers";
+import { TeamInvites } from "./collections/TeamInvites";
+import { Carts } from "./collections/Carts";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -27,11 +32,11 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Products, Orders, Addresses, Feedback, Warehouses],
+  collections: [Users, Media, Categories, Products, Orders, Addresses, Feedback, Warehouses, DiscountCodes, Sellers, SellerMembers, TeamInvites, Carts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",
   email: nodemailerAdapter({
-    defaultFromAddress: process.env.SMTP_FROM_EMAIL || "noreply@stondemporium.tech",
+    defaultFromAddress: process.env.SMTP_FROM_EMAIL || "noreply@localhost",
     defaultFromName: "Stond Emporium",
     transport: nodemailer.createTransport({
       host: process.env.SMTP_HOST,

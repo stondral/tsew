@@ -108,7 +108,7 @@ function ResetPasswordContent() {
             </CardHeader>
             <CardContent className="pt-4">
               <Button
-                className="w-full h-11 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold"
+                className="w-full h-11 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
                 onClick={() => router.push("/auth")}
               >
                 Back to Sign In

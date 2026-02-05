@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || ''
-  const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'stondemporium.tech'
+  const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost:3000'
   const isLocalhost = hostname.includes('localhost')
 
   // Skip static files and API routes

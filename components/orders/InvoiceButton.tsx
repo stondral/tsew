@@ -19,6 +19,9 @@ interface Order {
   subtotal: number;
   shippingCost: number;
   gst: number;
+  discountAmount?: number;
+  discountCode?: string;
+  discountSource?: string;
   total: number;
   guestPhone?: string;
 }
@@ -104,8 +107,21 @@ export default function InvoiceButton({ order, address }: InvoiceButtonProps) {
       doc.text(`Shipping: INR ${order.shippingCost.toLocaleString()}`, 140, finalY + 5);
       doc.text(`GST: INR ${order.gst.toLocaleString()}`, 140, finalY + 10);
       
+      let yOffset = 15;
+      if (order.discountAmount && order.discountAmount > 0) {
+        doc.setTextColor("#16a34a"); // Green color
+        const sourceLabel = order.discountSource === 'seller' ? 'Seller' : 'Store';
+        doc.text(
+          `${sourceLabel} Discount (${order.discountCode || "Applied"}): -INR ${order.discountAmount.toLocaleString()}`,
+          140,
+          finalY + yOffset
+        );
+        doc.setTextColor(textColor); // Reset color
+        yOffset += 5;
+      }
+      
       doc.setFontSize(12);
-      doc.text(`Total amount: INR ${order.total.toLocaleString()}`, 140, finalY + 20);
+      doc.text(`Total amount: INR ${order.total.toLocaleString()}`, 140, finalY + yOffset + 5);
 
       // Signatory
       doc.setFontSize(8);

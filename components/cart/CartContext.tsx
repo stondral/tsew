@@ -6,11 +6,15 @@ import React, {
   useEffect,
   useState,
   ReactNode,
+  useCallback,
+  useRef,
 } from "react";
 
 import { CartClient, CartContextType } from "./cart.types";
-import { loadCart, saveCart } from "./cart.storage";
+import { loadCart, saveCart, clearCart as clearLocalCart } from "./cart.storage";
 import { upsertItem } from "./cart.utils";
+import { fetchCartFromDB, syncCartToDB, mergeGuestCart } from "./cart.api";
+import { useAuth } from "@/components/auth/AuthContext";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -18,16 +22,77 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartClient>({ items: [] });
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+  
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isMountedRef = useRef(false);
 
+  // Load cart on mount or when auth status changes
   useEffect(() => {
-    console.log("🛒 CartProvider mounted, loading cart from localStorage...");
-    setCart(loadCart());
-    setIsLoading(false);
-  }, []);
+    async function initializeCart() {
+      console.log("🛒 Initializing cart, authenticated:", isAuthenticated);
 
+      if (isAuthenticated) {
+        // Load from database
+        console.log("🛒 Loading cart from database...");
+        const dbCart = await fetchCartFromDB();
+        
+        // Check if there's a guest cart in localStorage
+        const guestCart = loadCart();
+        
+        if (guestCart.items.length > 0) {
+          // Merge guest cart with DB cart
+          console.log("🛒 Merging guest cart with DB cart...");
+          const mergedCart = await mergeGuestCart(guestCart);
+          setCart(mergedCart);
+          
+          // Clear localStorage after successful merge
+          clearLocalCart();
+        } else {
+          setCart(dbCart);
+        }
+      } else {
+        // Load from localStorage for guest users
+        console.log("🛒 Loading cart from localStorage (guest)...");
+        setCart(loadCart());
+      }
+
+      setIsLoading(false);
+      isMountedRef.current = true;
+    }
+
+    initializeCart();
+  }, [isAuthenticated]);
+
+  // Debounced sync to database
+  const debouncedSyncToDB = useCallback((cartToSync: CartClient) => {
+    if (!isAuthenticated || !isMountedRef.current) return;
+
+    // Clear existing timeout
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Set new timeout
+    syncTimeoutRef.current = setTimeout(() => {
+      console.log("🛒 Syncing cart to database...");
+      syncCartToDB(cartToSync);
+    }, 1000); // 1 second debounce
+  }, [isAuthenticated]);
+
+  // Save cart changes
   useEffect(() => {
-    if (!isLoading) saveCart(cart);
-  }, [cart, isLoading]);
+    if (!isMountedRef.current || isLoading) return;
+
+    if (isAuthenticated) {
+      // Save to localStorage as backup + sync to DB
+      saveCart(cart);
+      debouncedSyncToDB(cart);
+    } else {
+      // Guest users: only localStorage
+      saveCart(cart);
+    }
+  }, [cart, isLoading, isAuthenticated, debouncedSyncToDB]);
 
   const addToCart = (
     productId: string,
@@ -80,7 +145,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const clearCart = () => setCart({ items: [] });
+  const clearCart = () => {
+    setCart({ items: [] });
+    if (isAuthenticated) {
+      // Also clear from database
+      syncCartToDB({ items: [] });
+    }
+  };
 
   const value: CartContextType = {
     cart,

@@ -110,7 +110,7 @@ export default function DeliveryManifestButton({ order, address }: DeliveryManif
       if (pickup.city && pickup.state) {
         doc.text(`${pickup.city}, ${pickup.state}`, 10, 64);
       } else {
-        doc.text("Returns & Support: operations@stondemporium.tech", 10, 64);
+        doc.text(`Returns & Support: operations@${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost'}`, 10, 64);
       }
 
       // RECEIPIENT (Deliver To)

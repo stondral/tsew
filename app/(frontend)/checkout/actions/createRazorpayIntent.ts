@@ -7,7 +7,10 @@ import { calculateCartTotals } from "@/lib/cart/calculations";
 import { createRazorpayOrder } from "@/lib/payments/razorpay";
 import { headers } from "next/headers";
 
-export async function createRazorpayIntent(items: { productId: string, variantId?: string | null, quantity: number }[]) {
+export async function createRazorpayIntent(
+  items: { productId: string, variantId?: string | null, quantity: number }[],
+  discountCode?: string
+) {
   const payload = await getPayload({ config });
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
@@ -15,8 +18,8 @@ export async function createRazorpayIntent(items: { productId: string, variantId
   if (!user) return { ok: false, error: "Unauthorized" };
   if (items.length === 0) return { ok: false, error: "Cart is empty" };
 
-  // 1. Calculate Totals & Validate Stock
-  const calculation = await calculateCartTotals(items, payload);
+  // 1. Calculate Totals & Validate Stock (with server-side discount revalidation)
+  const calculation = await calculateCartTotals(items, payload, discountCode);
   if (calculation.isStockProblem) {
     return { ok: false, error: `Stock issues: ${calculation.stockErrors.join(", ")}` };
   }

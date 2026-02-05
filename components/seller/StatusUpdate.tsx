@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateItemStatus } from "@/app/(frontend)/seller/orders/actions/updateItemStatus";
+import { updateItemStatus } from "@/app/(frontend)/seller/(dashboard)/orders/actions/updateItemStatus";
 import { 
   Select, 
   SelectContent, 

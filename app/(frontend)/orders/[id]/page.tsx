@@ -123,6 +123,12 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                         </div>
                     </div>
                     
+                    {order.discountCode && (
+                      <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 px-3 py-1 text-xs mt-2">
+                        💰 {order.discountCode} Applied
+                      </Badge>
+                    )}
+                    
                     <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 flex flex-wrap items-center gap-2 md:gap-3">
                         Order Details
                         <div className="hidden md:block h-2 w-2 rounded-full bg-gray-300" />
@@ -240,6 +246,19 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                         <div className="flex justify-between text-gray-400">
                             <span>Platform Fee</span>
                             <span className="text-gray-200">₹{order.platformFee}</span>
+                        </div>
+                    )}
+                    {order.discountAmount > 0 && (
+                        <div className="flex justify-between text-green-400">
+                            <div>
+                                <span>{order.discountSource === 'seller' ? 'Seller Discount' : 'Store Reward'}</span>
+                                {order.discountCode && (
+                                    <span className="ml-2 text-xs font-mono bg-green-500/20 px-2 py-0.5 rounded">
+                                        {order.discountCode}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="font-medium">-₹{order.discountAmount.toLocaleString("en-IN")}</span>
                         </div>
                     )}
                     <div className="border-t border-gray-700/50 pt-4 flex justify-between">

@@ -4,7 +4,7 @@ export const Feedback: CollectionConfig = {
   slug: 'feedback',
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'email', 'visualAppeal', 'createdAt'],
+    defaultColumns: ['name', 'email', 'visualAppeal'],
   },
   access: {
     create: () => true,
@@ -148,5 +148,4 @@ export const Feedback: CollectionConfig = {
       type: 'textarea',
     },
   ],
-  timestamps: true,
 }

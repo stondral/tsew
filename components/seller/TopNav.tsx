@@ -127,65 +127,49 @@ export function TopNav({ user }: TopNavProps) {
 
   return (
     <div className={cn(
-        "h-24 sticky top-0 z-40 transition-all duration-700 flex items-center justify-between",
+        "sticky top-0 z-40 transition-all duration-700 flex flex-col justify-center",
         scrolled 
-            ? "bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-b border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/20 dark:shadow-black/20 px-4 md:px-8 lg:px-14" 
-            : "bg-transparent px-4 md:px-8 lg:px-14"
+            ? "bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border-b border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/20 dark:shadow-black/20 py-4 px-4 md:px-8 lg:px-14" 
+            : "bg-transparent py-6 px-4 md:px-8 lg:px-14"
     )}>
-      <div className="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
-        {/* Mobile Menu Trigger */}
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden shrink-0 dark:text-slate-400 dark:hover:text-amber-500 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl shadow-sm border border-white dark:border-slate-700">
-              <Menu className="h-5 w-5 md:h-6 md:w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-[280px] sm:w-[320px] border-r-0">
-            <Sidebar user={user} className="w-full h-full" />
-          </SheetContent>
-        </Sheet>
-
-        {/* Dashboard Breadcrumbs - Hidden on very small screens */}
-        <div className="hidden sm:flex flex-col gap-0.5 min-w-0 overflow-hidden">
-            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 font-black text-[9px] uppercase tracking-[0.2em] mb-0.5">
-                <Sparkles className="h-3 w-3 text-amber-500 animate-pulse hidden md:block" />
-                <span className="truncate">Navigating Node</span>
-            </div>
-            <div className="flex items-center gap-2 md:gap-2.5 overflow-hidden">
-                {breadcrumbs.map((bc, i) => (
-                    <div key={bc.href} className="flex items-center gap-2 md:gap-2.5 shrink-0">
-                        {i > 0 && <span className="text-slate-200 dark:text-slate-800 text-[10px] font-black">/</span>}
-                        <Link 
-                            href={bc.href}
-                            className={cn(
-                                "text-xs md:text-sm font-black transition-all hover:text-amber-500 whitespace-nowrap tracking-tight truncate max-w-[100px] md:max-w-none",
-                                bc.active ? "text-slate-900 dark:text-white" : "text-slate-400 dark:text-slate-600"
-                            )}
-                        >
-                            {bc.label}
-                        </Link>
-                    </div>
-                ))}
+      <div className="flex items-center justify-between gap-6 w-full">
+        {/* Mobile Menu Trigger & Logo Area */}
+        <div className="flex items-center gap-4 shrink-0">
+            <Sheet>
+            <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="lg:hidden shrink-0 dark:text-slate-400 dark:hover:text-amber-500 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl shadow-sm border border-white dark:border-slate-700">
+                <Menu className="h-5 w-5 md:h-6 md:w-6" />
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 w-[280px] sm:w-[320px] border-r-0">
+                <Sidebar user={user} className="w-full h-full" />
+            </SheetContent>
+            </Sheet>
+            
+            {/* Navigating Node Label - Visible on Desktop */}
+            <div className="hidden lg:flex items-center gap-2 text-slate-400 dark:text-slate-500 font-black text-[10px] uppercase tracking-[0.2em]">
+                <Sparkles className="h-3 w-3 text-amber-500 animate-pulse" />
+                <span>Navigating Node</span>
             </div>
         </div>
 
-        {/* Creative Command Search */}
-        <div className="relative w-full group hidden lg:block max-w-xs xl:max-w-md mx-2 xl:mx-6">
+        {/* Creative Command Search - Now Centered and Wider */}
+        <div className="relative w-full group hidden lg:block max-w-2xl mx-auto">
             <div className={cn(
                 "absolute inset-0 bg-amber-500/20 rounded-[1.5rem] blur-2xl transition-opacity duration-500",
                 searchFocused ? "opacity-30" : "opacity-0"
             )} />
             <Search className={cn(
-                "absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors z-10",
+                "absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors z-10",
                 searchFocused ? "text-amber-500" : "text-slate-400"
             )} />
             <Input 
-                placeholder="Type command..." 
+                placeholder="Type command or search assets..." 
                 value={searchQuery}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-14 h-14 bg-white/50 dark:bg-slate-800/40 border-none ring-1 ring-slate-100 dark:ring-slate-700/50 focus-visible:ring-2 focus-visible:ring-amber-500/50 w-full rounded-[1.5rem] transition-all font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400/60 z-10 backdrop-blur-md"
+                className="pl-16 h-14 bg-white/60 dark:bg-slate-800/60 border-none ring-1 ring-slate-200 dark:ring-slate-700/50 focus-visible:ring-2 focus-visible:ring-amber-500/50 w-full rounded-[1.5rem] transition-all font-bold text-xs md:text-sm shadow-lg shadow-slate-200/20 dark:shadow-black/20 text-slate-900 dark:text-slate-100 placeholder:text-slate-400/60 z-10 backdrop-blur-xl"
             />
             <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden xl:flex items-center gap-2 z-10">
                 <div className="bg-slate-100 dark:bg-slate-700/50 p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 shadow-sm">
@@ -234,9 +218,8 @@ export function TopNav({ user }: TopNavProps) {
                 </div>
             )}
         </div>
-      </div>
 
-      <div className="flex items-center gap-2 md:gap-5">
+      <div className="flex items-center gap-2 md:gap-5 shrink-0">
         <div className="flex items-center gap-1 md:gap-1.5 bg-slate-50/50 dark:bg-slate-800/50 p-1 md:p-1.5 rounded-[1.25rem] border border-white dark:border-slate-800 backdrop-blur-md">
             {/* Search Trigger for mobile/tablet */}
             <Sheet>
@@ -490,6 +473,34 @@ export function TopNav({ user }: TopNavProps) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+      </div>
+      
+      {/* Row 2: Breadcrumbs - Dedicated Line */}
+      <div className="w-full mt-2 hidden sm:flex items-center gap-2 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-500">
+          <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 font-black text-[9px] uppercase tracking-[0.2em] shrink-0">
+             <span className="text-amber-500">●</span>
+             <span>Path</span>
+          </div>
+          <div className="h-px w-8 bg-slate-200 dark:bg-slate-800 shrink-0" />
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide mask-fade-right">
+            {breadcrumbs.map((bc, i) => (
+                <div key={bc.href} className="flex items-center gap-2 shrink-0 group">
+                    {i > 0 && <span className="text-slate-300 dark:text-slate-700 text-[10px] font-black">/</span>}
+                    <Link 
+                        href={bc.href}
+                        className={cn(
+                            "text-[11px] md:text-xs font-black transition-all whitespace-nowrap tracking-widest uppercase hover:underline decoration-2 underline-offset-4 decoration-amber-500",
+                            bc.active 
+                                ? "text-slate-900 dark:text-white" 
+                                : "text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400"
+                        )}
+                    >
+                        {bc.label}
+                    </Link>
+                </div>
+            ))}
+          </div>
       </div>
     </div>
   );

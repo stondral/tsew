@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import Image from "next/image";
 import { resolveMediaUrl } from "@/lib/media";
-import { updateProduct } from "../../app/(frontend)/seller/products/actions";
+import { updateProduct } from "@/app/(frontend)/seller/(dashboard)/products/actions";
 
 interface EditProductFormProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -315,7 +315,7 @@ export default function ProductDetailClient({
                 </div>
                 <Button variant="outline" size="sm" className="rounded-full" asChild>
                   <Link 
-                    href={`http://${product.seller.username}.stondemporium.tech`}
+                    href={`http://${product.seller.username}.${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost:3000'}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

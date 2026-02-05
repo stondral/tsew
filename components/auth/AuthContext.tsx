@@ -13,7 +13,7 @@ interface User {
   email: string;
   username: string;
   phone?: string;
-  role: "admin" | "seller" | "user";
+  role: "admin" | "seller" | "user" | "sellerEmployee";
   plan?: "starter" | "pro" | "elite";
   subscriptionId?: string;
   subscriptionStatus?: "active" | "inactive" | "pending" | "cancelled";
@@ -146,13 +146,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        data.errors?.[0]?.message || data.message || "Registration failed",
-      );
+        // Payload validation errors often come in an 'errors' array
+        const message = data.errors?.[0]?.message || data.message || "Registration failed";
+        throw new Error(message);
     }
 
     // Auto login after registration
-    await login(registerData.email, registerData.password);
+    // We try to log in, but if it fails (e.g. because email verification is required),
+    // we should NOT throw an error, because registration itself was successful.
+    try {
+        await login(registerData.email, registerData.password);
+    } catch (err) {
+        console.warn("Auto-login failed after registration (likely due to email verification):", err);
+        // Do NOT throw here. Let the UI proceed to the "Success / Verify Email" view.
+    }
   };
 
   const logout = async () => {

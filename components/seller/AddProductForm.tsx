@@ -27,7 +27,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 
-import { createProductAction } from "@/app/(frontend)/seller/products/new-actions";
+import { createProductAction } from "@/app/(frontend)/seller/(dashboard)/products/new-actions";
 
 interface AddProductFormProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
