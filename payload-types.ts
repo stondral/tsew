@@ -69,6 +69,19 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    categories: any;
+    products: any;
+    orders: any;
+    addresses: any;
+    feedback: any;
+    warehouses: any;
+    'discount-codes': any;
+    sellers: any;
+    'seller-members': any;
+    'team-invites': any;
+    carts: any;
+    'support-tickets': any;
+    'support-messages': any;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -139,6 +152,7 @@ export interface User {
       }[]
     | null;
   password?: string | null;
+  role?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

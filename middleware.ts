@@ -5,19 +5,70 @@ export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || ''
   const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost:3000'
   const isLocalhost = hostname.includes('localhost')
-
-  // Skip static files and API routes
   const path = req.nextUrl.pathname
+
+  // 1. Skip static files
   if (
     path.startsWith('/_next') || 
-    path.startsWith('/api') || 
     path.includes('.') ||
     path === '/favicon.ico'
   ) {
     return NextResponse.next()
   }
 
-  // 1. Is it platform domain?
+  // 2. Strict Admin & Support Security Block (MUST be before general API skip)
+  if (path.startsWith('/administrator') || path.startsWith('/api/support')) {
+    // ✅ Get token from cookie
+    const token = req.cookies.get('payload-token')?.value
+
+    if (!token) {
+      const url = req.nextUrl.clone()
+      url.pathname = '/auth'
+      url.searchParams.set('redirect', path)
+      console.warn(`❌ No auth token found for ${path}`)
+      return NextResponse.redirect(url)
+    }
+
+    try {
+      console.log(`🔐 Checking admin access for ${path}`)
+      
+      // ✅ Use Payload's built-in REST API endpoint
+      const payloadUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || 'http://localhost:3000'
+      
+      const response = await fetch(`${payloadUrl}/api/users?limit=1`, {
+        headers: {
+          Authorization: `JWT ${token}`,
+        },
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        console.error(`❌ Auth check failed: ${response.status}`)
+        const url = req.nextUrl.clone()
+        url.pathname = '/auth'
+        url.searchParams.set('redirect', path)
+        return NextResponse.redirect(url)
+      }
+
+      // ✅ Token is valid and authenticated - allow access
+      // The admin layout will verify the admin role and redirect if needed
+      console.log(`✅ Valid auth token verified for ${path}`)
+      return NextResponse.next()
+    } catch (error) {
+      console.error('❌ Admin middleware verification error:', error)
+      const url = req.nextUrl.clone()
+      url.pathname = '/auth'
+      url.searchParams.set('redirect', path)
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // 3. Skip remaining public API routes
+  if (path.startsWith('/api')) {
+    return NextResponse.next()
+  }
+
+  // 4. Is it platform domain?
   const isPlatform = 
     hostname === mainDomain || 
     hostname === `www.${mainDomain}` || 
@@ -28,7 +79,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // 2. Resolve Seller Identity
+  // 5. Resolve Seller Identity
   let query = ''
   
   if (hostname.endsWith(`.${mainDomain}`)) {

@@ -23,7 +23,9 @@ import {
   Command,
   Zap,
   ShieldAlert,
-  Lock
+  Lock,
+  ExternalLink,
+  Printer
 } from "lucide-react";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
@@ -147,6 +149,16 @@ export default async function OrderDetailPage({ params }: PageProps) {
         </div>
         <div className="flex items-center gap-4 bg-white p-2.5 rounded-[2rem] shadow-2xl shadow-slate-200/50 ring-1 ring-slate-100">
           <DeliveryManifestButton order={order} address={order.shippingAddress} />
+          {order.delivery?.trackingId && (
+            <Button
+              variant="outline"
+              className="rounded-2xl h-12 px-6 font-black uppercase text-[10px] tracking-widest border-slate-100 hover:bg-slate-50 transition-all flex items-center gap-3 active:scale-95"
+              onClick={() => window.open(`/api/delhivery/label?waybill=${order.delivery.trackingId}`, "_blank")}
+            >
+              <Printer className="h-4 w-4 text-emerald-500" />
+              Print Label
+            </Button>
+          )}
           <InvoiceButton order={order} address={order.shippingAddress} />
         </div>
       </div>
@@ -346,15 +358,35 @@ export default async function OrderDetailPage({ params }: PageProps) {
                     </div>
                   </div>
                   {order.delivery?.provider && (
-                    <div className="pt-6 border-t border-slate-100">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 leading-none">Logistics Protocol</p>
-                       <div className="flex items-center gap-4 text-sm font-black text-slate-900 bg-amber-50 px-5 py-4 rounded-2xl border border-amber-100/50">
-                          <Truck className="h-6 w-6 text-amber-600 shrink-0" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-amber-500/80 uppercase tracking-tighter">Carrier Service</span>
-                            <span>{order.delivery.provider}</span>
-                          </div>
+                    <div className="pt-6 border-t border-slate-100 space-y-4">
+                       <div>
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 leading-none">Logistics Protocol</p>
+                         <div className="flex items-center gap-4 text-sm font-black text-slate-900 bg-amber-50 px-5 py-4 rounded-2xl border border-amber-100/50">
+                            <Truck className="h-6 w-6 text-amber-600 shrink-0" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black text-amber-500/80 uppercase tracking-tighter">Carrier Service</span>
+                              <span>{order.delivery.provider}</span>
+                            </div>
+                         </div>
                        </div>
+
+                       {order.delivery.trackingId && (
+                         <div className="space-y-3">
+                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Awb / Tracking</p>
+                           <Link 
+                             href={`https://www.delhivery.com/track/package/${order.delivery.trackingId}`}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="flex items-center justify-between gap-4 text-sm font-black text-slate-900 bg-emerald-50 px-5 py-4 rounded-2xl border border-emerald-100/50 hover:bg-emerald-100/50 transition-colors group"
+                           >
+                             <div className="flex flex-col">
+                               <span className="text-[10px] font-black text-emerald-600/80 uppercase tracking-tighter capitalize">Waybill ID</span>
+                               <span className="font-mono text-emerald-700">{order.delivery.trackingId}</span>
+                             </div>
+                             <ExternalLink className="h-4 w-4 text-emerald-400 group-hover:text-emerald-600 transition-colors" />
+                           </Link>
+                         </div>
+                       )}
                     </div>
                   )}
                 </div>

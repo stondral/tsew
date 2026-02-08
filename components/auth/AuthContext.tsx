@@ -58,41 +58,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const baseUrl = (typeof window !== "undefined") ? "" : (process.env.NEXT_PUBLIC_PAYLOAD_URL || "http://localhost:3000");
-      const response = await fetch(
-        `${baseUrl}/api/users/me`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `JWT ${token}`,
-          },
-          credentials: "include",
-        },
-      );
+      // ✅ Ensure token is also set as cookie for server-side middleware
+      if (typeof window !== 'undefined') {
+        const expirationDate = new Date();
+        expirationDate.setTime(expirationDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+        document.cookie = `payload-token=${token}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Lax`;
+        console.log("AuthContext: Token set as cookie");
+      }
 
-      console.log(
-        "AuthContext: /api/users/me response status:",
-        response.status,
-      );
-      console.log("AuthContext: /api/users/me response ok:", response.ok);
+      // ✅ Decode JWT token locally to verify it's valid
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(
+            Buffer.from(parts[1], 'base64').toString('utf-8')
+          );
+          
+          // Verify token expiration
+          if (payload.exp && payload.exp * 1000 < Date.now()) {
+            console.warn("AuthContext: Token expired");
+            localStorage.removeItem("payload-token");
+            document.cookie = "payload-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            setUser(null);
+            setIsLoading(false);
+            return;
+          }
 
-      if (response.ok) {
-        const userData = await response.json();
-        console.log("AuthContext: User data loaded", userData.user);
-        setUser(userData.user);
-      } else {
-        console.log("AuthContext: Token invalid, removing");
-        const errorText = await response.text();
-        console.error("AuthContext: Error response:", errorText);
-        // Token is invalid, remove it
+          // Token is valid, set basic user info from token
+          const basicUser: User = {
+            id: payload.id,
+            email: payload.email,
+            username: payload.email,
+            role: payload.role || 'user',
+          };
+          
+          console.log("AuthContext: Token decoded successfully, user:", basicUser.id);
+          setUser(basicUser);
+          setIsLoading(false);
+          
+          // Try to fetch full user details from Payload but don't fail if it doesn't work
+          try {
+            const baseUrl = (typeof window !== "undefined") ? "" : (process.env.NEXT_PUBLIC_PAYLOAD_URL || "http://localhost:3000");
+            const response = await fetch(
+              `${baseUrl}/api/users/${payload.id}`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `JWT ${token}`,
+                },
+                credentials: "include",
+              },
+            );
+
+            if (response.ok) {
+              const userData = await response.json();
+              console.log("AuthContext: Full user data loaded", userData);
+              setUser(userData);
+            }
+          } catch (err) {
+            console.debug("AuthContext: Could not fetch full user details, using token data", err);
+            // Continue with basic user from token
+          }
+        } else {
+          throw new Error('Invalid token format');
+        }
+      } catch (decodeErr) {
+        console.error("AuthContext: Token decode failed:", decodeErr);
         localStorage.removeItem("payload-token");
+        document.cookie = "payload-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         setUser(null);
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error("AuthContext: Failed to fetch user:", error);
+      console.error("AuthContext: fetchUser error:", error);
       setUser(null);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -118,7 +158,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (data.token) {
+      // ✅ Store in localStorage for client-side usage
       localStorage.setItem("payload-token", data.token);
+      
+      // ✅ Also set as cookie for server-side middleware (client-side JS can set cookies)
+      if (typeof window !== 'undefined') {
+        // Set cookie for 7 days
+        const expirationDate = new Date();
+        expirationDate.setTime(expirationDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+        document.cookie = `payload-token=${data.token}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Lax`;
+        console.log('✅ Token stored in localStorage and cookie');
+      }
+      
       await fetchUser();
     }
   };
@@ -180,6 +231,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Logout error:", error);
     } finally {
       localStorage.removeItem("payload-token");
+      
+      // ✅ Also clear the cookie
+      if (typeof window !== 'undefined') {
+        document.cookie = "payload-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        console.log('✅ Token cleared from localStorage and cookie');
+      }
+      
       setUser(null);
     }
   };

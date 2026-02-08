@@ -11,7 +11,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 function AcceptInviteInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get("token");
+  const token = searchParams?.get("token");
   
   const [status, setStatus] = useState<"loading" | "success" | "error" | "unauthorized" | "mismatch">("loading");
   const [error, setError] = useState("");

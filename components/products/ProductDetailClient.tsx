@@ -305,13 +305,15 @@ export default function ProductDetailClient({
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-900">
-                      {product.seller.name}
+                      {product.seller.name || "Unknown Seller"}
                     </span>
-                    <BadgeCheck className="w-5 h-5 text-blue-500" />
+                    {product.seller.isVerified && <BadgeCheck className="w-5 h-5 text-blue-500" />}
                   </div>
-                  <span className="text-sm text-gray-600">
-                    Official Store Partner
-                  </span>
+                  {product.seller.isVerified && (
+                    <span className="text-sm text-gray-600">
+                      Official Store Partner
+                    </span>
+                  )}
                 </div>
                 <Button variant="outline" size="sm" className="rounded-full" asChild>
                   <Link 

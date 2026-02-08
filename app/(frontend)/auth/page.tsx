@@ -21,7 +21,7 @@ import logoston from "@/components/logoston.png";
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectPath = searchParams.get("redirect") || "/";
+  const redirectPath = searchParams?.get("redirect") || "/";
   const { login, register, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 

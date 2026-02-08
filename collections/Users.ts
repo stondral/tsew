@@ -8,6 +8,8 @@ export const Users: CollectionConfig = {
   
   // ✅ 1. Enable Native Auth & Verification
   auth: {
+    // ✅ Store token in a httpOnly cookie for server-side middleware
+    tokenExpiration: 7 * 24 * 60 * 60, // 7 days
     verify: {
       generateEmailSubject: () => "Verify your Stond Emporium account",
       generateEmailHTML: (args: any) => {

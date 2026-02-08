@@ -53,6 +53,7 @@ export interface Product {
     name: string;
     username?: string;
     email?: string;
+    isVerified?: boolean;
   };
 }
 

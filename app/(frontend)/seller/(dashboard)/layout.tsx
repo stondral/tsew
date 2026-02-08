@@ -33,7 +33,7 @@ export default async function SellerLayout({
         <Sidebar user={user} className="hidden lg:block shadow-2xl z-50 h-full shrink-0" />
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           <TopNav user={user} />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 transition-all duration-300 custom-scrollbar">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden relative transition-all duration-300 custom-scrollbar">
             <div className="p-4 md:p-14 max-w-full mx-auto min-h-[calc(100vh-200px)]">
               {children}
             </div>

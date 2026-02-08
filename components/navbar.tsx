@@ -147,7 +147,8 @@ export default function Navbar() {
   );
 }
 
-function isActive(href: string, pathname: string) {
+function isActive(href: string, pathname: string | null) {
+  if (!pathname) return false;
   if (href === "/") return pathname === "/";
   return pathname.startsWith(href);
 }

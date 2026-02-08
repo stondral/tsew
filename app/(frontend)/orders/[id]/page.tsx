@@ -13,13 +13,15 @@ import {
   Truck,
   CheckCircle2,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { resolveMediaUrl } from "@/lib/utils";
 import Image from "next/image";
 import InvoiceButton from "@/components/orders/InvoiceButton";
+import { HelpButton } from "@/components/orders/HelpButton";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -200,6 +202,32 @@ export default async function OrderDetailsPage({ params }: PageProps) {
 
           {/* Sidebar Info */}
           <div className="space-y-6">
+            {/* Tracking Radar (Newly Added) */}
+            {order.delivery?.trackingId && (
+              <div className="bg-white p-4 md:p-6 rounded-3xl border border-blue-100 shadow-sm bg-gradient-to-br from-white to-blue-50/30">
+                  <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <Truck className="w-5 h-5 text-blue-500" />
+                      Shipment Radar
+                  </h3>
+                  <div className="space-y-4">
+                      <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-100/50">
+                          <p className="text-[10px] uppercase tracking-wider text-blue-400 font-black mb-1">Waybill ID</p>
+                          <p className="font-mono font-bold text-blue-700 text-sm">{order.delivery.trackingId}</p>
+                      </div>
+                      <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-12 font-bold transition-all shadow-lg shadow-blue-200">
+                          <Link 
+                            href={`https://www.delhivery.com/track/package/${order.delivery.trackingId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Track Live Status
+                            <ExternalLink className="w-4 h-4 ml-2" />
+                          </Link>
+                      </Button>
+                  </div>
+              </div>
+            )}
+
             {/* Delivery Address */}
             <div className="bg-white p-4 md:p-6 rounded-3xl border border-gray-100 shadow-sm">
                 <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -273,8 +301,10 @@ export default async function OrderDetailsPage({ params }: PageProps) {
             </div>
 
             <Button asChild variant="outline" className="w-full border-gray-200 rounded-2xl h-14 font-bold text-gray-600 hover:bg-white hover:border-gray-300">
-                <Link href="/contact">Need help with this order?</Link>
+                <Link href="/contact">Contact Support</Link>
             </Button>
+
+            <HelpButton orderId={order.id} orderNumber={order.orderNumber} />
           </div>
         </div>
       </div>

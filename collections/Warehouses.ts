@@ -129,5 +129,24 @@ export const Warehouses: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [
+      async ({ doc, operation }) => {
+        if (operation === 'create') {
+          try {
+            const { registerWarehouse } = await import('@/lib/delhivery');
+            await registerWarehouse({
+              name: doc.label,
+              phone: doc.phone,
+              address: doc.address,
+              city: doc.city,
+              pin: doc.postalCode,
+              email: doc.email,
+            });
+          } catch (error) {
+            console.error('Failed to register warehouse with Delhivery:', error);
+          }
+        }
+      },
+    ],
   },
 }

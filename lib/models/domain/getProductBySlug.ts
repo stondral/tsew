@@ -1,9 +1,11 @@
-import { getPayload } from "payload";
-import config from "@/payload.config";
+'use server';
+
 import { Product } from "./product";
 import { resolveMediaUrl } from "@/lib/media";
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
+  const { getPayload } = await import("payload");
+  const { default: config } = await import("@/payload.config");
   const payload = await getPayload({ config });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await (payload as any).find({
@@ -15,6 +17,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     },
     limit: 1,
     depth: 3,
+    overrideAccess: true,
   });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,13 +87,31 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     popularity: p.popularity,
 
     /* Seller */
-    seller: p.seller
-      ? {
-          id: typeof p.seller === "object" ? p.seller.id : p.seller,
-          name: typeof p.seller === "object" ? (p.seller.username || p.seller.email) : undefined,
-          username: typeof p.seller === "object" ? p.seller.username : undefined,
-          email: typeof p.seller === "object" ? p.seller.email : undefined,
-        }
-      : undefined,
+    seller: (() => {
+      if (!p.seller) {
+        return undefined;
+      }
+      
+      const s = p.seller;
+      console.log("DEBUG: product.seller populated data:", JSON.stringify(s, null, 2));
+
+      // If s is just an ID (not populated)
+      if (typeof s === 'string') {
+        return {
+          id: s,
+          name: "Unknown Seller",
+          isVerified: false
+        };
+      }
+
+      // If s is a populated object
+      return {
+        id: s.id,
+        name: s.name || "Unknown Seller",
+        username: s.slug || undefined,
+        email: s.email || undefined,
+        isVerified: s.subscriptionStatus === 'active',
+      };
+    })(),
   };
 }

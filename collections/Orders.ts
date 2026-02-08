@@ -107,6 +107,8 @@ export const Orders: CollectionConfig = {
             description: "The warehouse where the order will be picked up from.",
           },
         },
+        { name: "trackingId", type: "text", admin: { readOnly: true } },
+        { name: "carrierResponse", type: "json", admin: { readOnly: true } },
       ],
     },
 

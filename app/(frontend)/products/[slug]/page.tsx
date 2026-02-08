@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 
+export const dynamic = 'force-dynamic';
+
 import ProductDetailClient from "@/components/products/ProductDetailClient";
 import { resolveMediaUrl } from "@/lib/media";
 import { getProductBySlug } from "@/lib/models/domain/getProductBySlug";

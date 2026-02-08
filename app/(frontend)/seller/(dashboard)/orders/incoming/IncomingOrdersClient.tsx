@@ -1,23 +1,23 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Package, Truck, Check, X, AlertCircle, Sparkles, PartyPopper, MapPin, Loader2 } from "lucide-react"
-import { acceptOrderAction } from "@/app/(frontend)/seller/actions/orders"
-import { motion, AnimatePresence } from "framer-motion"
+import { acceptOrderAction, getDelhiveryStatsAction } from "@/app/(frontend)/seller/actions/orders"
+import { AnimatePresence, motion } from "framer-motion"
+import { EditOrderAddressModal } from "@/components/seller/EditOrderAddressModal"
 import { resolveMediaUrl } from "@/lib/media"
 import Image from "next/image"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
 const PROVIDERS = [
-  { name: "Delhivery", cost: 60 },
-  { name: "XpressBees", cost: 55 },
-  { name: "BlueDart", cost: 80 },
+  { name: "Delhivery", cost: 0 },
+  { name: "Shiprocket", cost: 0 },
 ]
 
 interface OrderItem {
@@ -29,6 +29,19 @@ interface OrderItem {
   status?: string;
 }
 
+interface OrderAddress {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  pincode?: string;
+}
+
 interface Order {
   id: string;
   orderNumber?: string;
@@ -38,6 +51,9 @@ interface Order {
   subtotal?: number;
   gst?: number;
   total?: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  shippingAddress?: OrderAddress;
 }
 
 interface Warehouse {
@@ -96,7 +112,10 @@ export default function IncomingOrdersClient({ orders, warehouses }: { orders: O
 
 function OrderCard({ order, warehouses }: { order: Order, warehouses: Warehouse[] }) {
   const [isAccepting, setIsAccepting] = useState(false)
+  const [isEditingAddress, setIsEditingAddress] = useState(false)
   const [isAccepted, setIsAccepted] = useState(false)
+
+  const address = order.shippingAddress;
 
   if (isAccepted) {
     return (
@@ -143,15 +162,26 @@ function OrderCard({ order, warehouses }: { order: Order, warehouses: Warehouse[
   }
 
   return (
-    <Card className="overflow-hidden border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
+    <Card className="overflow-hidden border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow group bg-white dark:bg-slate-900">
       <div className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-black text-slate-900 group-hover:text-amber-600 transition-colors">Order #{order.orderNumber || order.id.slice(-8).toUpperCase()}</span>
+              <span className="text-lg font-black text-slate-900 dark:text-white group-hover:text-amber-600 transition-colors">Order #{order.orderNumber || order.id.slice(-8).toUpperCase()}</span>
               <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none font-bold text-[10px] uppercase tracking-wider">
                 {order.status}
               </Badge>
+              <div className="flex items-center gap-1.5 ml-2">
+                <Badge variant="outline" className="border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-[9px] uppercase tracking-tight">
+                  {order.paymentMethod}
+                </Badge>
+                <Badge className={cn(
+                  "font-bold text-[9px] uppercase tracking-tight border-none",
+                  order.paymentStatus === 'paid' ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100" : "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                )}>
+                  {order.paymentStatus}
+                </Badge>
+              </div>
             </div>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest px-0.5">
               {new Date(order.createdAt).toLocaleString('en-IN', {
@@ -169,14 +199,14 @@ function OrderCard({ order, warehouses }: { order: Order, warehouses: Warehouse[
           </Button>
         </div>
 
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100/50">
-          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Order Items</h4>
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100/50 dark:border-slate-700/50">
+          <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">Order Items</h4>
           <div className="space-y-3">
             {order.items.map((item, idx: number) => (
               <div key={idx} className="flex justify-between items-center text-sm">
                 <div className="flex items-center gap-3">
                    {item.productImage ? (
-                     <div className="h-10 w-10 rounded-lg overflow-hidden border border-slate-200 relative">
+                     <div className="h-10 w-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative">
                        <Image 
                          src={resolveMediaUrl(item.productImage)} 
                          alt={item.productName} 
@@ -190,13 +220,38 @@ function OrderCard({ order, warehouses }: { order: Order, warehouses: Warehouse[
                      </div>
                    )}
                    <div className="flex flex-col">
-                      <span className="font-bold text-slate-700">{item.productName}</span>
-                      <span className="text-xs text-slate-400 font-medium">Qty: {item.quantity}</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-200">{item.productName}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Qty: {item.quantity}</span>
                    </div>
                 </div>
-                <span className="font-black text-slate-900">₹{(item.priceAtPurchase * item.quantity).toLocaleString()}</span>
+                <span className="font-black text-slate-900 dark:text-white">₹{(item.priceAtPurchase * item.quantity).toLocaleString()}</span>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="mt-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100/50 dark:border-slate-700/50">
+          <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-1">Shipping Address</h4>
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-amber-500 mt-1 shrink-0" />
+              <div className="flex flex-col">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  {address?.addressLine1 || "No street address"}
+                </p>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                  {address?.city}, {address?.state} {address?.postalCode}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditingAddress(true)}
+              className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl"
+            >
+              Edit Data
+            </Button>
           </div>
         </div>
 
@@ -209,7 +264,7 @@ function OrderCard({ order, warehouses }: { order: Order, warehouses: Warehouse[
              <span>GST</span>
              <span>₹{order.gst?.toLocaleString() || '0'}</span>
           </div>
-          <div className="flex justify-between items-center text-lg font-black text-slate-900 mt-2">
+          <div className="flex justify-between items-center text-lg font-black text-slate-900 dark:text-white mt-2">
              <span>Grand Total</span>
              <span className="text-amber-500 font-black">₹{order.total?.toLocaleString()}</span>
           </div>
@@ -225,6 +280,17 @@ function OrderCard({ order, warehouses }: { order: Order, warehouses: Warehouse[
             onSuccess={() => setIsAccepted(true)}
           />
         )}
+
+        {isEditingAddress && (
+          <EditOrderAddressModal
+            order={order}
+            onClose={() => setIsEditingAddress(false)}
+            onSuccess={() => {
+              // Address updated, parent will revalidate or we can trigger local update if needed
+              // For now, revalidatePath in the action will handle it on next render
+            }}
+          />
+        )}
       </AnimatePresence>
     </Card>
   )
@@ -234,8 +300,67 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
   const router = useRouter()
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<null | { name: string; cost: number }>(null)
+  const [realTimeStats, setRealTimeStats] = useState<{ cost: number, expectedDelivery: string } | null>(null)
+  const [isFetchingStats, setIsFetchingStats] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+
+  // New shipping parameters
+  const [gm, setGm] = useState<number>(0)
+  const [dimL, setDimL] = useState<number>(0)
+  const [dimB, setDimB] = useState<number>(0)
+  const [dimH, setDimH] = useState<number>(0)
+  const [md, setMd] = useState<'S' | 'E'>('E')
+
+  // Initialize weight based on items
+  useEffect(() => {
+    let initialWeight = 0;
+    order.items.forEach(item => {
+      // Note: We don't have product weight here easily without another fetch, 
+      // but we can default it or wait for the first stats call which returns it.
+      initialWeight += 500 * item.quantity; 
+    });
+    setGm(initialWeight);
+  }, [order.items]);
+
+  const handleProviderSelect = async (provider: { name: string, cost: number }) => {
+    setSelectedProvider(provider)
+    if (provider.name === "Delhivery" && selectedWarehouse) {
+      fetchRealTimeStats(selectedWarehouse.id, { gm, l: dimL, b: dimB, h: dimH, md })
+    } else {
+      setRealTimeStats(null)
+    }
+  }
+
+  const handleWarehouseSelect = (warehouse: Warehouse) => {
+    setSelectedWarehouse(warehouse)
+    if (selectedProvider?.name === "Delhivery") {
+      fetchRealTimeStats(warehouse.id, { gm, l: dimL, b: dimB, h: dimH, md })
+    }
+  }
+
+  const fetchRealTimeStats = async (warehouseId: string, overrides?: Record<string, unknown>) => {
+    setIsFetchingStats(true)
+    setError(null)
+    try {
+      const result = await getDelhiveryStatsAction(order.id, warehouseId, overrides as { gm?: number; l?: number; b?: number; h?: number; md?: 'S' | 'E' })
+      if (result.ok && result.data) {
+        const statsData = result.data as { cost: number; expectedDelivery: string; totalWeight?: number };
+        setRealTimeStats({ cost: statsData.cost, expectedDelivery: statsData.expectedDelivery })
+        setSelectedProvider(prev => prev ? { ...prev, cost: statsData.cost } : { name: "Delhivery", cost: statsData.cost })
+        // Update local gm if it was 0 and result returned a weight
+        if (gm === 0 && statsData.totalWeight) {
+          setGm(statsData.totalWeight)
+        }
+      } else {
+        setError(result.error || "Failed to fetch real-time delivery stats")
+      }
+    } catch (err) {
+      console.error("Error fetching stats:", err)
+    } finally {
+      setIsFetchingStats(false)
+    }
+  }
 
   const handleAccept = async () => {
     if (!selectedProvider || !selectedWarehouse) return
@@ -243,12 +368,21 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
     
     startTransition(() => {
        (async () => {
-          const gst = selectedProvider.cost * 0.18
+          const cost = selectedProvider.name === "Delhivery" && realTimeStats ? realTimeStats.cost : selectedProvider.cost
+          const gst = cost * 0.18
+          console.log("Accepting Order with cost:", cost, "for provider:", selectedProvider.name);
           const result = await acceptOrderAction(order.id, {
             provider: selectedProvider.name,
-            cost: selectedProvider.cost,
-            gst: gst,
-            pickupWarehouse: selectedWarehouse.id
+            cost: Number(cost),
+            gst: Number(gst),
+            pickupWarehouse: selectedWarehouse.id,
+            overrides: selectedProvider.name === "Delhivery" ? {
+              gm,
+              l: dimL,
+              b: dimB,
+              h: dimH,
+              md
+            } : undefined
           })
 
           if (result.ok) {
@@ -263,10 +397,8 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
     })
   }
 
-
-
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -278,15 +410,15 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-white rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl border border-white"
+        className="relative bg-white dark:bg-slate-900 rounded-[32px] w-full max-w-lg overflow-hidden shadow-2xl border border-white dark:border-slate-800"
       >
-        <div className="p-8">
+        <div className="p-8 max-h-[90vh] overflow-y-auto scrollbar-hide">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 bg-amber-50 rounded-2xl flex items-center justify-center">
                 <Truck className="h-5 w-5 text-amber-500" />
               </div>
-              <h3 className="text-xl font-black text-slate-900">Schedule Delivery</h3>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Schedule Delivery</h3>
             </div>
             <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl">
               <X className="h-5 w-5" />
@@ -296,15 +428,15 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
           <div className="space-y-6">
             {/* Warehouse Selection Step */}
             <div className="space-y-4">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                 <MapPin className="h-3 w-3" /> Step 1: Select Pickup Warehouse
               </label>
               {warehouses.length > 0 ? (
-                <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto pr-1 scrollbar-hide">
+                <div className="grid grid-cols-1 gap-2 max-h-[140px] overflow-y-auto pr-1 scrollbar-hide">
                   {warehouses.map((w) => (
                     <button
                       key={w.id}
-                      onClick={() => setSelectedWarehouse(w)}
+                      onClick={() => handleWarehouseSelect(w)}
                       className={cn(
                         "flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left",
                         selectedWarehouse?.id === w.id
@@ -313,8 +445,8 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
                       )}
                     >
                       <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="font-bold text-slate-900 text-sm truncate">{w.label}</span>
-                        <span className="text-[10px] text-slate-400 font-bold truncate">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm truncate">{w.label}</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold truncate">
                           {w.city}, {w.state}
                         </span>
                       </div>
@@ -339,29 +471,111 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
                   animate={{ height: "auto", opacity: 1 }}
                   className="space-y-4 overflow-hidden"
                 >
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1 flex items-center gap-2">
                     <Truck className="h-3 w-3" /> Step 2: Select Delivery Partner
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {PROVIDERS.map((p) => (
                       <button
                         key={p.name}
-                        onClick={() => setSelectedProvider(p)}
+                        onClick={() => handleProviderSelect(p)}
                         className={cn(
-                          "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2",
+                          "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 relative",
                           selectedProvider?.name === p.name
-                            ? "border-amber-500 bg-amber-50/50 shadow-md"
-                            : "border-slate-50 hover:border-amber-200 bg-white shadow-sm"
+                            ? "border-amber-500 bg-amber-50/50 dark:bg-amber-500/10 shadow-md"
+                            : "border-slate-50 dark:border-slate-800 hover:border-amber-200 bg-white dark:bg-slate-900 shadow-sm"
                         )}
                       >
                         <span className={cn(
                           "font-bold text-xs",
-                          selectedProvider?.name === p.name ? "text-slate-900" : "text-slate-600"
+                          selectedProvider?.name === p.name ? "text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400"
                         )}>{p.name}</span>
-                        <span className="font-black text-slate-900 text-xs">₹{p.cost}</span>
+                        <span className="font-black text-slate-900 dark:text-white text-xs">
+                          {p.name === "Delhivery" ? (
+                            isFetchingStats ? (
+                              <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
+                            ) : realTimeStats ? (
+                              `₹${realTimeStats.cost}`
+                            ) : "Select to fetch"
+                          ) : (
+                            p.cost > 0 ? `₹${p.cost}` : "Select to quote"
+                          )}
+                        </span>
+                        {p.name === "Delhivery" && realTimeStats && (
+                          <div className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[8px] px-2 py-0.5 rounded-full font-black shadow-lg">
+                            {realTimeStats.expectedDelivery}
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
+
+                  {/* Delhivery Custom Parameters */}
+                  {selectedProvider?.name === "Delhivery" && (
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Shipment Details</label>
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => setMd('S')}
+                            className={cn("px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all", md === 'S' ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900" : "bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-800")}
+                          >Surface</button>
+                          <button 
+                            onClick={() => setMd('E')}
+                            className={cn("px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all", md === 'E' ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900" : "bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-800")}
+                          >Express</button>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <span className="text-[8px] font-bold text-slate-400 uppercase px-1">Weight (Grams)</span>
+                           <input 
+                            type="number" 
+                            value={gm} 
+                            onChange={(e) => setGm(Number(e.target.value))}
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold focus:ring-1 focus:ring-amber-500 outline-none transition-all dark:text-white"
+                          />
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <div className="space-y-1 col-span-3">
+                            <span className="text-[8px] font-bold text-slate-400 uppercase px-1">Dimensions (L x B x H) cm</span>
+                          </div>
+                           <input 
+                            type="number" 
+                            placeholder="20"
+                            value={dimL || ''} 
+                            onChange={(e) => setDimL(Number(e.target.value))}
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-1 py-2 text-xs font-bold text-center focus:ring-1 focus:ring-amber-500 outline-none dark:text-white"
+                          />
+                          <input 
+                            type="number" 
+                            placeholder="15"
+                            value={dimB || ''} 
+                            onChange={(e) => setDimB(Number(e.target.value))}
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-1 py-2 text-xs font-bold text-center focus:ring-1 focus:ring-amber-500 outline-none dark:text-white"
+                          />
+                          <input 
+                            type="number" 
+                            placeholder="5"
+                            value={dimH || ''} 
+                            onChange={(e) => setDimH(Number(e.target.value))}
+                            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-1 py-2 text-xs font-bold text-center focus:ring-1 focus:ring-amber-500 outline-none dark:text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <Button 
+                        size="sm" 
+                        onClick={() => fetchRealTimeStats(selectedWarehouse!.id, { gm, l: dimL, b: dimB, h: dimH, md })}
+                         className="w-full bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700 text-[10px] font-black h-8 rounded-lg"
+                        disabled={isFetchingStats}
+                      >
+                        {isFetchingStats ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Truck className="h-3 w-3 mr-2 text-amber-500" />}
+                        Recalculate Delhivery Rates
+                      </Button>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -370,20 +584,44 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
               <motion.div 
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
-                className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-2 overflow-hidden"
+                 className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-700 space-y-2 overflow-hidden"
               >
                 <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-tighter">
                   <span>Shipping Cost</span>
-                  <span>₹{selectedProvider.cost.toFixed(2)}</span>
+                  <span>
+                    {isFetchingStats ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      `₹${(selectedProvider.name === "Delhivery" && realTimeStats ? realTimeStats.cost : selectedProvider.cost).toFixed(2)}`
+                    )}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-tighter">
                   <span>GST (18%)</span>
-                  <span>₹{(selectedProvider.cost * 0.18).toFixed(2)}</span>
+                  <span>
+                    {isFetchingStats ? (
+                       <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      `₹${((selectedProvider.name === "Delhivery" && realTimeStats ? realTimeStats.cost : selectedProvider.cost) * 0.18).toFixed(2)}`
+                    )}
+                  </span>
                 </div>
-                <Separator className="my-2 bg-slate-200" />
-                <div className="flex justify-between text-lg font-black text-slate-900">
+                {selectedProvider.name === "Delhivery" && realTimeStats && (
+                  <div className="flex justify-between text-xs font-bold text-emerald-600 uppercase tracking-tighter pt-1 border-t border-slate-100">
+                    <span>Expected Delivery</span>
+                    <span>{realTimeStats.expectedDelivery || "Unavailable (No Mock Data)"}</span>
+                  </div>
+                )}
+                 <Separator className="my-2 bg-slate-200 dark:bg-slate-700" />
+                 <div className="flex justify-between text-lg font-black text-slate-900 dark:text-white">
                   <span className="uppercase tracking-tighter">Total Fee</span>
-                  <span className="text-amber-500">₹{(selectedProvider.cost * 1.18).toFixed(2)}</span>
+                  <span className="text-amber-500">
+                    {isFetchingStats ? (
+                       <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      `₹${((selectedProvider.name === "Delhivery" && realTimeStats ? realTimeStats.cost : selectedProvider.cost) * 1.18).toFixed(2)}`
+                    )}
+                  </span>
                 </div>
               </motion.div>
             )}
@@ -406,7 +644,7 @@ function DeliveryModal({ order, warehouses, onClose, onSuccess }: { order: Order
             </Button>
             <Button 
               onClick={handleAccept} 
-              disabled={!selectedProvider || !selectedWarehouse || isPending}
+              disabled={!selectedProvider || !selectedWarehouse || isPending || isFetchingStats}
               className="bg-slate-900 hover:bg-black text-white font-black rounded-2xl h-14 shadow-xl active:scale-95 disabled:bg-slate-100 disabled:text-slate-400"
             >
               {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : (

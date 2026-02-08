@@ -21,6 +21,8 @@ import { Sellers } from "./collections/Sellers";
 import { SellerMembers } from "./collections/SellerMembers";
 import { TeamInvites } from "./collections/TeamInvites";
 import { Carts } from "./collections/Carts";
+import { SupportTickets } from "./collections/SupportTickets"
+import { SupportMessages } from "./collections/SupportMessages"
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -32,7 +34,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Categories, Products, Orders, Addresses, Feedback, Warehouses, DiscountCodes, Sellers, SellerMembers, TeamInvites, Carts],
+  collections: [Users, Media, Categories, Products, Orders, Addresses, Feedback, Warehouses, DiscountCodes, Sellers, SellerMembers, TeamInvites, Carts, SupportTickets, SupportMessages],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",
   email: nodemailerAdapter({

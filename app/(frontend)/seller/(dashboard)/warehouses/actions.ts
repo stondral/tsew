@@ -25,18 +25,17 @@ export async function createWarehouseAction(data: WarehouseData) {
     const requestHeaders = await headers()
     const { user } = await payload.auth({ headers: requestHeaders })
 
-    interface User { id: string; role?: string }
-  if (!user || ((user as User).role !== "seller" && (user as User).role !== "admin")) {
+    if (!user || (user.role !== "seller" && user.role !== "admin")) {
       return { ok: false, error: "Unauthorized" }
     }
 
     const warehouse = await payload.create({
-      collection: "warehouses" as never,
+      collection: "warehouses",
       data: {
         ...data,
         user: user.id,
-      } as never,
-    }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      },
+    });
 
     revalidatePath("/seller/warehouses")
     return { ok: true, data: warehouse }
@@ -52,16 +51,15 @@ export async function updateWarehouseAction(id: string, data: Partial<WarehouseD
     const requestHeaders = await headers()
     const { user } = await payload.auth({ headers: requestHeaders })
 
-    interface User { id: string; role?: string }
-    if (!user || ((user as User).role !== "seller" && (user as User).role !== "admin")) {
+    if (!user || (user.role !== "seller" && user.role !== "admin")) {
       return { ok: false, error: "Unauthorized" }
     }
 
     const warehouse = await payload.update({
-      collection: "warehouses" as never,
+      collection: "warehouses",
       id,
-      data: data as never,
-    }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      data: data,
+    });
 
     revalidatePath("/seller/warehouses")
     return { ok: true, data: warehouse }
@@ -77,15 +75,14 @@ export async function deleteWarehouseAction(id: string) {
     const requestHeaders = await headers()
     const { user } = await payload.auth({ headers: requestHeaders })
 
-    interface User { id: string; role?: string }
-    if (!user || ((user as User).role !== "seller" && (user as User).role !== "admin")) {
+    if (!user || (user.role !== "seller" && user.role !== "admin")) {
       return { ok: false, error: "Unauthorized" }
     }
 
     await payload.delete({
-      collection: "warehouses" as never,
+      collection: "warehouses",
       id,
-    }) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    });
 
     revalidatePath("/seller/warehouses")
     return { ok: true }

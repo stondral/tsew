@@ -7,19 +7,7 @@ export const Sellers: CollectionConfig = {
     defaultColumns: ['name', 'slug', 'owner', 'plan', 'subscriptionStatus'],
   },
   access: {
-    read: ({ req }) => {
-      if (!req.user) return false
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const user = req.user as any
-      if (user.role === 'admin') return true
-      
-      // Sellers can read their own organization
-       return {
-        owner: { equals: user.id },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any
-      // Note: We will add more complex access control once SellerMembers is implemented
-    },
+    read: () => true,
     create: ({ req }) => !!req.user,
     update: ({ req }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

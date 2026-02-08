@@ -20,7 +20,7 @@ export default function ProductSort({ currentSort }: Props) {
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString() || "");
       params.set(name, value);
       return params.toString();
     },
@@ -33,7 +33,7 @@ export default function ProductSort({ currentSort }: Props) {
         <button 
           onClick={() => router.push(`/products?${createQueryString("view", "grid")}`)}
           className={`p-2.5 rounded-xl transition-all ${
-            (!searchParams.get("view") || searchParams.get("view") === "grid") 
+            (!searchParams?.get("view") || searchParams?.get("view") === "grid") 
               ? "bg-orange-50 text-orange-600 shadow-sm" 
               : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
           }`}
@@ -44,7 +44,7 @@ export default function ProductSort({ currentSort }: Props) {
         <button 
           onClick={() => router.push(`/products?${createQueryString("view", "list")}`)}
           className={`p-2.5 rounded-xl transition-all ${
-            searchParams.get("view") === "list" 
+            searchParams?.get("view") === "list" 
               ? "bg-orange-50 text-orange-600 shadow-sm" 
               : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
           }`}

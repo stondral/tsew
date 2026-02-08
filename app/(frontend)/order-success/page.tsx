@@ -15,13 +15,13 @@ function OrderSuccessContent() {
   const cartCleared = useRef(false);
 
   // Handle both single orderId (legacy) and multiple orderIds (new)
-  const orderId = searchParams.get("orderId");
-  const orderIdsString = searchParams.get("orderIds");
-  const checkoutId = searchParams.get("checkoutId");
+  const orderId = searchParams?.get("orderId");
+  const orderIdsString = searchParams?.get("orderIds");
+  const checkoutId = searchParams?.get("checkoutId");
   
-  const paymentId = searchParams.get("paymentId");
-  const razorpayOrderId = searchParams.get("razorpayOrderId"); // From Razorpay callback
-  const signature = searchParams.get("signature");
+  const paymentId = searchParams?.get("paymentId");
+  const razorpayOrderId = searchParams?.get("razorpayOrderId"); // From Razorpay callback
+  const signature = searchParams?.get("signature");
 
   const [status, setStatus] = useState<"loading" | "paid" | "pending" | "failed">("loading");
   const [method, setMethod] = useState<string | null>(null);

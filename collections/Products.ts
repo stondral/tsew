@@ -146,6 +146,20 @@ export const Products: CollectionConfig = {
 
         return data
       },
+
+      // Approval Audit Logic
+      async ({ req, data, originalDoc, operation }) => {
+        if (operation === 'update' && data.status && data.status !== originalDoc.status) {
+          // If status is changing to live or rejected, and user is admin
+          if (req.user && (req.user as any)?.role === 'admin') {
+            if (data.status === 'live' || data.status === 'rejected') {
+              data.approvedBy = req.user.id;
+              data.approvedAt = new Date().toISOString();
+            }
+          }
+        }
+        return data
+      },
     ],
 
     // 🔥 AUTO-EXPIRE FEATURED PRODUCTS (NO CRON)
@@ -276,6 +290,28 @@ export const Products: CollectionConfig = {
       },
     },
 
+    /* SHIPPING DIMENSIONS */
+    {
+      name: 'weight',
+      type: 'number',
+      admin: {
+        description: 'Weight of the product in grams',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'dimensions',
+      type: 'group',
+      admin: {
+        position: 'sidebar',
+      },
+      fields: [
+        { name: 'length', type: 'number', admin: { description: 'Length in cm' } },
+        { name: 'breadth', type: 'number', admin: { description: 'Breadth in cm' } },
+        { name: 'height', type: 'number', admin: { description: 'Height in cm' } },
+      ],
+    },
+
     /* VISIBILITY */
 
     {
@@ -321,6 +357,36 @@ export const Products: CollectionConfig = {
       ],
       admin: {
         position: 'sidebar',
+      },
+    },
+
+    {
+      name: 'approvedBy',
+      type: 'relationship',
+      relationTo: 'users',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (_, siblingData) => ['live', 'rejected'].includes(siblingData?.status),
+      },
+    },
+
+    {
+      name: 'approvedAt',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: (_, siblingData) => ['live', 'rejected'].includes(siblingData?.status),
+      },
+    },
+
+    {
+      name: 'rejectedReason',
+      type: 'textarea',
+      admin: {
+        position: 'sidebar',
+        condition: (_, siblingData) => siblingData?.status === 'rejected',
       },
     },
 

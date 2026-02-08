@@ -18,7 +18,7 @@ import { useAuth } from "@/components/auth/AuthContext";
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get("token");
+  const token = searchParams?.get("token");
   const { refresh } = useAuth();
 
   const verificationInFlightRef = useRef(false);

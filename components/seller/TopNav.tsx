@@ -70,7 +70,7 @@ export function TopNav({ user }: TopNavProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const pathParts = pathname.split("/").filter(Boolean);
+  const pathParts = (pathname || "").split("/").filter(Boolean);
   const breadcrumbs = pathParts.map((part, index) => {
     let href = "/" + pathParts.slice(0, index + 1).join("/");
     // Map root seller path to dashboard
@@ -485,7 +485,7 @@ export function TopNav({ user }: TopNavProps) {
           <div className="h-px w-8 bg-slate-200 dark:bg-slate-800 shrink-0" />
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide mask-fade-right">
             {breadcrumbs.map((bc, i) => (
-                <div key={bc.href} className="flex items-center gap-2 shrink-0 group">
+                <div key={`${bc.href}-${i}`} className="flex items-center gap-2 shrink-0 group">
                     {i > 0 && <span className="text-slate-300 dark:text-slate-700 text-[10px] font-black">/</span>}
                     <Link 
                         href={bc.href}

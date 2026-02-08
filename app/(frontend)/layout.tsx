@@ -1,4 +1,4 @@
-import React from "react";
+  import React from "react";
 import "@/app/globals.css";
 import { AuthProvider } from "@/components/auth/AuthContext";
 import { CartProvider } from "@/components/cart/CartContext";
@@ -25,6 +25,7 @@ export const metadata = {
 };
 
 import Script from "next/script";
+import { ChatButton } from "@/components/support/ChatButton";
 
 const Layout = ({ children }: LayoutProps) => {
   return (
@@ -35,6 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
             {children}
           </ConditionalLayout>
         </div>
+        <ChatButton />
         <Script 
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="lazyOnload"

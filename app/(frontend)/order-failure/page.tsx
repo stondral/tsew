@@ -9,7 +9,7 @@ import { Suspense } from "react";
 function OrderFailureContent() {
   const searchParams = useSearchParams();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _orderId = searchParams.get("orderId");
+  const _orderId = searchParams?.get("orderId");
 
   return (
     <div className="min-h-screen bg-white py-20 px-6">

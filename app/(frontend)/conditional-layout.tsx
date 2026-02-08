@@ -7,13 +7,13 @@ import Footer from "@/components/footer";
 export default function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // Check if the current route is under /seller
-  const isSellerPage = pathname?.startsWith("/seller");
+  const isAppPage = pathname?.startsWith("/seller") || pathname?.startsWith("/administrator");
 
   return (
     <>
-      {!isSellerPage && <Navbar />}
+      {!isAppPage && <Navbar />}
       <main className="flex-1 relative z-10">{children}</main>
-      {!isSellerPage && <Footer />}
+      {!isAppPage && <Footer />}
     </>
   );
 }

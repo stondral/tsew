@@ -37,7 +37,7 @@ export default function ProductFilters({
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString() || "");
       if (value) {
         params.set(name, value);
       } else {
@@ -54,7 +54,7 @@ export default function ProductFilters({
   };
 
   const handlePriceApply = () => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() || "");
     if (minPrice) params.set("minPrice", minPrice);
     else params.delete("minPrice");
     
@@ -67,7 +67,7 @@ export default function ProductFilters({
   const clearPrices = () => {
     setMinPrice("");
     setMaxPrice("");
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams?.toString() || "");
     params.delete("minPrice");
     params.delete("maxPrice");
     router.push(`/products?${params.toString()}`);
