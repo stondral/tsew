@@ -44,7 +44,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
   const order = await (payload as any).findByID({
     collection: "orders",
     id,
-    depth: 1,
+    depth: 0, // Optimized: no relationship population needed, order contains all data
   });
 
   if (!order || (typeof order.user === 'string' ? order.user : order.user.id) !== user.id) {
