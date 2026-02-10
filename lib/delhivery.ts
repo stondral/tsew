@@ -487,3 +487,41 @@ export async function schedulePickup(params: { pickup_location: string, pickup_d
     return null;
   }
 }
+
+/**
+ * Track shipment using Waybill or Order ID
+ * Documentation: https://one.delhivery.com/developer-portal/document/b2c/get/tracking
+ */
+export async function trackShipment(params: { waybill?: string, ref_ids?: string }) {
+  const url = new URL(`${DELHIVERY_API_URL}/api/v1/packages/json/`);
+  
+  if (params.waybill) {
+    url.searchParams.append("waybill", params.waybill);
+  }
+  if (params.ref_ids) {
+    url.searchParams.append("ref_ids", params.ref_ids);
+  }
+
+  console.log("🔍 Tracking Delhivery shipment:", params.waybill || params.ref_ids);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${DELHIVERY_TOKEN}`,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Delhivery Track API error (${response.status}): ${errorText}`);
+      throw new Error(`Delhivery Track API error: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Delhivery Track fetch failed:", error);
+    return null;
+  }
+}

@@ -65,16 +65,16 @@ export default function MyOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 py-12 px-6">
+    <div className="min-h-screen bg-gray-50/50 py-8 md:py-12 px-4 md:px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
+            <div className="flex items-center gap-2 md:gap-4">
                <Link href="/profile" className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200">
                   <ArrowLeft className="w-5 h-5 text-gray-600" />
                </Link>
-               <h1 className="text-3xl font-extrabold text-gray-900">My Orders</h1>
+               <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">My Orders</h1>
             </div>
-            <p className="text-gray-500 font-medium">{orders.length} orders found</p>
+            <p className="text-gray-500 font-medium text-sm md:text-base">{orders.length} orders found</p>
         </div>
 
         {orders.length === 0 ? (
@@ -96,8 +96,8 @@ export default function MyOrdersPage() {
                 href={`/orders/${order.id}`}
                 className="block group"
               >
-                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-orange-200 transition-all duration-300">
-                  <div className="flex flex-col md:flex-row md:items-center gap-6">
+                <div className="bg-white p-4 md:p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-orange-200 transition-all duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6">
                     {/* Items Preview */}
                     <div className="flex -space-x-3">
                          {order.items?.[0]?.productImage ? (
@@ -130,7 +130,7 @@ export default function MyOrdersPage() {
                           })}
                         </div>
                       </div>
-                      <h3 className="font-bold text-lg text-gray-900 truncate">
+                      <h3 className="font-bold text-base md:text-lg text-gray-900 truncate">
                         {order.items.length === 1
                            ? order.items[0].productName
                            : `${order.items[0].productName} + ${order.items.length - 1} more items`
@@ -138,19 +138,19 @@ export default function MyOrdersPage() {
                       </h3>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4 md:text-right">
-                      <div className="flex flex-col items-start md:items-end gap-1">
-                          <p className="text-xl font-black text-gray-900">₹{order.total.toLocaleString("en-IN")}</p>
+                    <div className="flex items-center justify-between sm:justify-end gap-4 sm:text-right">
+                      <div className="flex flex-col items-start sm:items-end gap-1">
+                          <p className="text-lg md:text-xl font-black text-gray-900">₹{order.total.toLocaleString("en-IN")}</p>
                           <div className="flex gap-2">
-                            <Badge variant="outline" className={cn("rounded-md", order.paymentStatus === 'paid' ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200")}>
+                            <Badge variant="outline" className={cn("rounded-md text-[10px] md:text-xs", order.paymentStatus === 'paid' ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200")}>
                                 {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                             </Badge>
-                            <Badge variant="outline" className="rounded-md border-orange-200 text-orange-700 bg-orange-50 font-semibold uppercase tracking-wider text-[10px]">
+                            <Badge variant="outline" className="rounded-md border-orange-200 text-orange-700 bg-orange-50 font-semibold uppercase tracking-wider text-[9px] md:text-[10px]">
                                 {order.status}
                             </Badge>
                           </div>
                       </div>
-                      <ChevronRight className="w-6 h-6 text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                      <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
                     </div>
                   </div>
                 </div>

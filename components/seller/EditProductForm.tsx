@@ -14,7 +14,7 @@ import {
   Save, 
   Loader2, 
   LayoutGrid, 
-  DollarSign, 
+  IndianRupee, 
   Package, 
   Trash2,
   ShieldCheck,
@@ -157,7 +157,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
 
   const sections = [
     { id: "basics", name: "Basics", icon: LayoutGrid },
-    { id: "pricing", name: "Price & Stock", icon: DollarSign },
+    { id: "pricing", name: "Price & Stock", icon: IndianRupee },
     { id: "media", name: "Media Assets", icon: ImageIcon },
     { id: "variants", name: "Variants (Optional)", icon: Package },
     { id: "advanced", name: "Advanced", icon: ShieldCheck },
@@ -315,9 +315,9 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
                         <div className="grid gap-10 md:grid-cols-2">
                             <div className="space-y-6">
                                 <div className="space-y-4">
-                                    <Label className="text-xs font-black uppercase text-slate-400 tracking-[0.15em] pl-1">Base Listing Price ($)</Label>
+                                    <Label className="text-xs font-black uppercase text-slate-400 tracking-[0.15em] pl-1">Selling Price (₹)</Label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-amber-500" />
+                                        <IndianRupee className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-amber-500" />
                                         <Input 
                                             type="text" 
                                             inputMode="decimal"
@@ -334,7 +334,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
                                     </div>
                                 </div>
                                 <div className="space-y-4">
-                                    <Label className="text-xs font-black uppercase text-slate-400 tracking-[0.15em] pl-1">Compare-at Price ($)</Label>
+                                    <Label className="text-xs font-black uppercase text-slate-400 tracking-[0.15em] pl-1">Maximum Retail Price (₹)</Label>
                                     <Input 
                                         type="text" 
                                         inputMode="decimal"
@@ -588,7 +588,7 @@ export function EditProductForm({ product, categories }: EditProductFormProps) {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-xs font-black uppercase text-slate-400 tracking-wider">Price ($)</Label>
+                                                <Label className="text-xs font-black uppercase text-slate-400 tracking-wider">Price (₹)</Label>
                                                 <Input
                                                     type="text"
                                                     inputMode="decimal"

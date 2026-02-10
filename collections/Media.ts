@@ -47,5 +47,14 @@ export const Media: CollectionConfig = {
       type: "text",
       required: false,
     },
+    {
+      name: "folder",
+      type: "relationship",
+      relationTo: "media-folders" as never,
+      required: false,
+      admin: {
+        position: "sidebar",
+      },
+    },
   ],
 };

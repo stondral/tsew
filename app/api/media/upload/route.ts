@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
       headers: requestHeaders,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!user || ((user as any).role !== "seller" && (user as any).role !== "admin")) {
+    if (!user) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }

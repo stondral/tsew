@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Update - Stond Emporium</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        <div
+            style="background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+            <!-- Header -->
+            <div
+                style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 32px; text-align: center;">
+                <img src="https://res.cloudinary.com/ddyp4krsd/image/upload/v1769238624/logoston_rsgzgk.jpg"
+                    alt="Stond Emporium"
+                    style="width: 100px; height: auto; margin-bottom: 20px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.2);" />
+                <h1 style="color: white; font-size: 28px; font-weight: 800; margin: 0;">Order Status Update! 🚚</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">Order #{{orderNumber}}</p>
+            </div>
+
+            <!-- Main Content -->
+            <div style="padding: 40px 32px;">
+                <p style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0;">Hello {{username}},
+                </p>
+                <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 32px 0;">
+                    Your order status has been updated to <strong style="color: #f97316;">{{status}}</strong>.
+                    {{statusMessage}}
+                </p>
+
+                <!-- Order Summary -->
+                <div style="border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; margin-bottom: 32px;">
+                    <div style="background: #f8fafc; padding: 16px 20px; border-bottom: 1px solid #e2e8f0;">
+                        <h3
+                            style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b;">
+                            Order Items</h3>
+                    </div>
+                    <div style="padding: 0 20px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            {{itemsTable}}
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CTA -->
+                <div style="text-align: center; margin-bottom: 40px;">
+                    <a href="{{orderLink}}"
+                        style="display: inline-block; background: #f97316; color: white; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 12px rgba(249,115,22,0.2);">View Order Details</a>
+                </div>
+
+                <p style="text-align: center; color: #94a3b8; font-size: 13px; line-height: 1.6;">
+                    Questions about your order? Just reply to this email or visit our <a href="{{supportLink}}"
+                        style="color: #f97316; text-decoration: none;">Support Center</a>.
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #f8fafc; padding: 32px; border-top: 1px solid #e2e8f0; text-align: center;">
+                <p
+                    style="color: #cbd5e1; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700; margin: 0 0 12px 0;">
+                    Stond Emporium • 🇮🇳 Proudly Indian</p>
+                <p style="color: #94a3b8; font-size: 12px; margin: 0;">You received this email because you placed an
+                    order on Stond Emporium.</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

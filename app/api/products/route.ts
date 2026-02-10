@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
-import { resolveMediaUrl } from '@/lib/media';
+import { mapPayloadProductToDomain } from '@/lib/products';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,46 +33,13 @@ export async function GET(request: NextRequest) {
       where,
       limit,
       depth: 2,
+      overrideAccess: true,
     });
 
-    // Transform the data
+    // Transform the data using shared mapper
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const products = data?.docs?.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      basePrice: p.basePrice,
-      price: (p.price && p.price > 0) ? p.price : p.basePrice,
-      compareAtPrice: p.compareAtPrice,
-      isActive: p.isActive,
-      status: p.status,
-      popularity: p.popularity,
-      featured: p.featured,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      image: p.media ? resolveMediaUrl(p.media as any) : null,
-      images: Array.isArray(p.media)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ? p.media.map((m: any) => resolveMediaUrl(m))
-        : p.media
-        ? [resolveMediaUrl(p.media)]
-        : [],
-      category: {
-        name: typeof p.category === 'object' ? p.category.name : (p.category || 'Uncategorized')
-      },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      variants: (p.variants || []).map((v: any) => ({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        image: v.image ? resolveMediaUrl(v.image as any) : null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        id: v.id as any,
-        name: v.name,
-        sku: v.sku,
-        price: v.price,
-        stock: v.stock,
-        attributes: v.attributes || []
-      })),
-    })) ?? [];
-
+    const products = data?.docs?.map((p: any) => mapPayloadProductToDomain(p)) ?? [];
+    
     return NextResponse.json({ products });
   } catch (error) {
     console.error('Error fetching products:', error);

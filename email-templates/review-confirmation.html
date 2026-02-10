@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank You for Your Review</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9fafb;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation"
+                    style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+
+                    <!-- Header with gradient -->
+                    <tr>
+                        <td
+                            style="background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
+                                Thank You! 🎉
+                            </h1>
+                            <p style="margin: 10px 0 0 0; color: #fff3e0; font-size: 16px;">
+                                Your voice makes our community stronger
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Main content -->
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <p style="margin: 0 0 20px 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
+                                Hi <strong>{{customerName}}</strong>,
+                            </p>
+
+                            <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                                We're absolutely thrilled to see your {{rating}}-star review for
+                                <strong>{{productName}}</strong>! Your feedback helps fellow shoppers make informed
+                                decisions and inspires us to keep delivering exceptional products.
+                            </p>
+
+                            <!-- Review preview box -->
+                            <div
+                                style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 25px 0; border-radius: 8px;">
+                                <p
+                                    style="margin: 0 0 10px 0; color: #92400e; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Your Review
+                                </p>
+                                <div style="margin-bottom: 10px;">
+                                    {{ratingStars}}
+                                </div>
+                                <p
+                                    style="margin: 0; color: #78350f; font-size: 15px; line-height: 1.5; font-style: italic;">
+                                    "{{reviewText}}"
+                                </p>
+                            </div>
+
+                            <p style="margin: 0 0 20px 0; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                                Your review is now live and visible to our community! It will help others discover
+                                amazing products just like you did.
+                            </p>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" style="margin: 30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{productUrl}}"
+                                            style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(249, 115, 22, 0.3);">
+                                            View Your Review
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Divider -->
+                            <div style="border-top: 1px solid #e5e7eb; margin: 30px 0;"></div>
+
+                            <!-- Additional message -->
+                            <p style="margin: 0 0 15px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                <strong>Did you know?</strong> Reviews like yours help small businesses thrive and give
+                                shoppers the confidence to try new products. You're making a real difference! 💙
+                            </p>
+
+                            <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                If you have any questions or need assistance, our support team is always here to help.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                            <p style="margin: 0 0 10px 0; color: #9ca3af; font-size: 13px;">
+                                With gratitude,<br>
+                                <strong style="color: #f97316;">The TSEW Team</strong>
+                            </p>
+                            <p style="margin: 15px 0 0 0; color: #9ca3af; font-size: 12px;">
+                                This email was sent because you recently posted a review on our platform.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

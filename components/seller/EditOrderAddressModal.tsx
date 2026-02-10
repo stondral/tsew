@@ -14,8 +14,8 @@ interface EditOrderAddressModalProps {
       firstName?: string;
       lastName?: string;
       phone?: string;
-      addressLine1?: string;
-      addressLine2?: string;
+      address?: string;
+      apartment?: string;
       city?: string;
       state?: string;
       postalCode?: string;
@@ -35,8 +35,8 @@ export function EditOrderAddressModal({ order, onClose, onSuccess }: EditOrderAd
     firstName: address?.firstName || "",
     lastName: address?.lastName || "",
     phone: address?.phone || "",
-    address: address?.addressLine1 || "",
-    apartment: address?.addressLine2 || "",
+    address: address?.address || "",
+    apartment: address?.apartment || "",
     city: address?.city || "",
     state: address?.state || "",
     postalCode: address?.postalCode || "",

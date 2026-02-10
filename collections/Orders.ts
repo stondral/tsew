@@ -35,7 +35,10 @@ export const Orders: CollectionConfig = {
       if (allowedSellers.length === 0) return false;
 
       return {
-        seller: { in: allowedSellers }
+        or: [
+          { seller: { in: allowedSellers } },
+          { "items.seller": { in: allowedSellers } }
+        ]
       } as any;
     },
 

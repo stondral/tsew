@@ -3,6 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { ArrowDownAZ, LayoutGrid, List } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   currentSort: string;
@@ -54,26 +61,31 @@ export default function ProductSort({ currentSort }: Props) {
         </button>
       </div>
 
-      <div className="relative group">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-600">
-          <ArrowDownAZ className="w-5 h-5" />
-        </div>
-        <select
+      <div className="relative group min-w-[200px]">
+        <Select
           value={currentSort}
-          onChange={(e) => router.push(`/products?${createQueryString("sort", e.target.value)}`)}
-          className="appearance-none pl-12 pr-10 py-4 bg-white border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-orange-100 transition-all font-bold text-gray-900 shadow-sm hover:shadow-md cursor-pointer"
+          onValueChange={(value) =>
+            router.push(`/products?${createQueryString("sort", value)}`)
+          }
         >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-           </svg>
-        </div>
+          <SelectTrigger className="h-auto pl-12 pr-10 py-4 bg-white border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-orange-100 transition-all font-bold text-gray-900 shadow-sm hover:shadow-md cursor-pointer border">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-600">
+              <ArrowDownAZ className="w-5 h-5" />
+            </div>
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent className="rounded-2xl border-gray-100 shadow-xl">
+            {SORT_OPTIONS.map((opt) => (
+              <SelectItem 
+                key={opt.value} 
+                value={opt.value}
+                className="py-3 px-4 focus:bg-orange-50 focus:text-orange-600 rounded-xl transition-colors cursor-pointer"
+              >
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

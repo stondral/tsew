@@ -16,7 +16,7 @@ export function useChat(ticketId: string, userId: string, senderType: 'admin' | 
         console.log(`📥 useChat: Fetching initial data for ticket ${ticketId}`);
         const [msgRes, ticketRes] = await Promise.all([
           fetch(`/api/support/messages?ticketId=${ticketId}`),
-          fetch(`/api/support/tickets/${ticketId}`) // We might need this endpoint or just rely on parent
+          fetch(`/api/support/tickets/${ticketId}`) 
         ]);
         
         if (msgRes.ok) {
@@ -38,19 +38,6 @@ export function useChat(ticketId: string, userId: string, senderType: 'admin' | 
     const initSSE = () => {
       console.log(`🔗 useChat: Connecting to SSE stream for ticket ${ticketId}`);
       
-      // Get token for authentication
-      const token = typeof window !== 'undefined' 
-        ? localStorage.getItem('payload-token')
-        : null;
-
-      if (!token) {
-        console.warn("⚠️ useChat: No token found - cannot connect to SSE");
-        setError("No authentication token");
-        setIsConnected(false);
-        return;
-      }
-
-      // Connect to SSE with ticket ID
       const url = `/api/support/stream?ticketId=${encodeURIComponent(ticketId)}`;
       const eventSource = new EventSource(url);
       eventSourceRef.current = eventSource;
@@ -74,9 +61,10 @@ export function useChat(ticketId: string, userId: string, senderType: 'admin' | 
 
           if (data.type === 'read_receipt') {
             console.log(`📖 useChat: Messages read by ${data.readerId}`);
-            setMessages((prev) => prev.map(m => 
-              m.sender !== data.readerId ? { ...m, deliveryStatus: 'read' } : m
-            ));
+            setMessages((prev) => prev.map(m => {
+              const senderId = typeof m.sender === 'object' ? m.sender?.id : m.sender;
+              return senderId !== data.readerId ? { ...m, deliveryStatus: 'read' } : m;
+            }));
             return;
           }
 
@@ -90,7 +78,10 @@ export function useChat(ticketId: string, userId: string, senderType: 'admin' | 
             }
 
             // If this is our optimistic message being confirmed, replace it
-            if (message.sender === userId && message.senderType === senderType && message._status === 'received') {
+            const msgSenderId = typeof message.sender === 'object' ? message.sender?.id : message.sender;
+            const isMe = msgSenderId === userId;
+            
+            if (isMe && message.senderType === senderType && message._status === 'received') {
               const index = prev.findIndex(m => m._status === 'pending' && m.sender === userId && m.senderType === senderType);
               if (index >= 0) {
                 console.log("✅ useChat: Replaced optimistic message with server response");
@@ -149,6 +140,7 @@ export function useChat(ticketId: string, userId: string, senderType: 'admin' | 
         content,
         orderId,
         timestamp: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
         deliveryStatus: "sending",
         _status: 'pending',
       };
@@ -182,7 +174,6 @@ export function useChat(ticketId: string, userId: string, senderType: 'admin' | 
         })
         .then((data) => {
           console.log("✅ useChat: Message sent to server:", data);
-          // Message will be received via SSE and replace optimistic one
         })
         .catch((err) => {
           console.error("❌ useChat: Failed to send message:", err);

@@ -7,24 +7,30 @@ import { usePathname, useRouter } from "next/navigation";
 import { Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { motion, AnimatePresence } from "framer-motion";
 import AuthDropdown from "@/components/auth/AuthDropdown";
 import Cart from "@/components/cart/Cart";
+import { useWishlist } from "@/components/products/WishlistContext";
+
 import logoston from "./logoston.png";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Discover" },
-  { href: "/about-us", label: " Our Story" },
-  { href: "/feedback", label: "Feedback" },
+  { href: "/wishlist", label: "Wishlist" },
   { href: "/about-us", label: "About Us" },
+  { href: "/feedback", label: "Feedback" },
 ];
 
 export default function Navbar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const isFeedbackPage = pathname === "/feedback";
+   const pathname = usePathname();
+   const router = useRouter();
+   const [isScrolled, setIsScrolled] = useState(false);
+   const [isSearchVisible, setIsSearchVisible] = useState(false);
+   const [isMenuOpen, setIsMenuOpen] = useState(false);
+   const isFeedbackPage = pathname === "/feedback";
+   const { wishlistIds: _ } = useWishlist();
 
   useEffect(() => {
     if (!isFeedbackPage) return;
@@ -41,17 +47,19 @@ export default function Navbar() {
     <nav className={`sticky top-4 z-50 w-[95%] max-w-7xl mx-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] ring-1 ring-black/5 transition-all duration-300 ${
       isFeedbackPage && isScrolled ? "opacity-0 pointer-events-none -translate-y-full" : "opacity-100"
     }`}>
-      <div className="container flex h-16 items-center px-4 md:px-8 relative">
+      <div className="container flex h-16 items-center px-4 md:px-8 relative overflow-hidden">
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-accent/10 via-transparent to-accent/10 pointer-events-none opacity-50" />
 
         {/* mobile menu */}
-        <Sheet>
+        <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="mr-2 md:hidden z-10">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left">
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <SheetDescription className="sr-only">Access site pages and search.</SheetDescription>
             <nav className="flex flex-col gap-4 mt-8">
               <form
                 onSubmit={(e) => {
@@ -69,10 +77,11 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  onClick={() => setIsMenuOpen(false)}
                   className={`text-lg font-medium transition-colors ${
                     isActive(link.href, pathname)
                       ? "text-foreground font-semibold"
-                      : "text-foreground/60 hover:text-accent"
+                      : "text-foreground/80 hover:text-accent"
                   }`}
                 >
                   {link.label}
@@ -98,14 +107,14 @@ export default function Navbar() {
 
         {/* desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium z-10">
-          {NAV_LINKS.slice(0, 4).map((link) => (
+          {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`transition-colors ${
+              className={`transition-colors duration-200 pb-1 ${
                 isActive(link.href, pathname)
-                  ? "text-foreground font-semibold"
-                  : "text-foreground/60 hover:text-accent"
+                  ? "text-foreground font-semibold border-b-2 border-accent"
+                  : "text-foreground/80 hover:text-foreground"
               }`}
             >
               {link.label}
@@ -139,9 +148,64 @@ export default function Navbar() {
             </form>
           </div>
 
+          {/* Mobile Search Button */}
+          <div className="md:hidden flex items-center">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsSearchVisible(true)}
+              className="text-foreground/60"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          </div>
+
           <Cart />
           <AuthDropdown />
         </div>
+
+        {/* Mobile Search Overlay */}
+        <AnimatePresence>
+          {isSearchVisible && (
+            <motion.div
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute inset-0 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl flex items-center px-4 gap-2 z-30"
+            >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const q = formData.get("q");
+                  if (q) {
+                    router.push(`/products?q=${encodeURIComponent(q.toString())}`);
+                    setIsSearchVisible(false);
+                  }
+                }}
+                className="flex-1 flex items-center relative"
+              >
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  name="q"
+                  type="search"
+                  autoFocus
+                  placeholder="Search products..."
+                  className="h-10 pl-10 pr-4 w-full bg-accent/50 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-accent"
+                />
+              </form>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsSearchVisible(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </nav>
   );

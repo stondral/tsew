@@ -36,7 +36,9 @@ export function ProductsApprovalClient({ pendingProducts, liveProducts }: Produc
 
   const handleApprove = async (id: string) => {
     setProcessingId(id);
-    const result = await approveProductAction(id);
+    const isFeatured = !!featuredDate[id];
+    const until = featuredDate[id];
+    const result = await approveProductAction(id, isFeatured, until);
     if (!result.success) {
       alert(result.error);
     }
@@ -109,7 +111,7 @@ export function ProductsApprovalClient({ pendingProducts, liveProducts }: Produc
             </div>
             <div className="text-right">
               <p className="text-lg font-black text-indigo-600">₹{product.basePrice}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Base Price</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Selling Price</p>
             </div>
           </div>
 
@@ -118,13 +120,44 @@ export function ProductsApprovalClient({ pendingProducts, liveProducts }: Produc
           <div className="pt-4 border-t border-slate-50 dark:border-slate-800/50 flex flex-wrap gap-4 items-center justify-between">
             {activeTab === "pending" ? (
               <div className="flex flex-col gap-4 w-full">
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-4">
                     <Input 
                         placeholder="Rejection reason (required for reject)" 
-                        className="bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs"
+                        className="bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs flex-1"
                         value={rejectReason[product.id] || ""}
                         onChange={(e) => setRejectReason({ ...rejectReason, [product.id]: e.target.value })}
                     />
+                    <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 h-12 border border-slate-100 dark:border-slate-800 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="checkbox" 
+                                id={`featured-${product.id}`}
+                                className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                                checked={!!featuredDate[product.id]}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        // Default to 30 days from now
+                                        const d = new Date();
+                                        d.setDate(d.getDate() + 30);
+                                        setFeaturedDate({ ...featuredDate, [product.id]: d.toISOString().split('T')[0] });
+                                    } else {
+                                        const newDates = { ...featuredDate };
+                                        delete newDates[product.id];
+                                        setFeaturedDate(newDates);
+                                    }
+                                }}
+                            />
+                            <label htmlFor={`featured-${product.id}`} className="text-[10px] font-black uppercase tracking-widest cursor-pointer select-none">Mark Featured</label>
+                        </div>
+                        {featuredDate[product.id] && (
+                            <Input 
+                                type="date"
+                                className="w-40 bg-transparent border-none text-xs h-8 p-0 focus-visible:ring-0"
+                                value={featuredDate[product.id] || ""}
+                                onChange={(e) => setFeaturedDate({ ...featuredDate, [product.id]: e.target.value })}
+                            />
+                        )}
+                    </div>
                 </div>
                 <div className="flex gap-2 w-full">
                     <Button 
@@ -133,13 +166,13 @@ export function ProductsApprovalClient({ pendingProducts, liveProducts }: Produc
                         className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase rounded-xl h-12"
                     >
                         <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Approve Asset
+                        Approve Asset {featuredDate[product.id] && " & Feature"}
                     </Button>
                     <Button 
                         onClick={() => handleReject(product.id)}
                         disabled={processingId === product.id}
                         variant="ghost" 
-                        className="flex-1 text-rose-500 hover:bg-rose-500 hover:text-white font-black text-xs uppercase rounded-xl h-12 border border-rose-100 dark:border-rose-900/30"
+                        className="shrink-0 w-48 text-rose-500 hover:bg-rose-500 hover:text-white font-black text-xs uppercase rounded-xl h-12 border border-rose-100 dark:border-rose-900/30"
                     >
                         <XCircle className="h-4 w-4 mr-2" />
                         Reject Access

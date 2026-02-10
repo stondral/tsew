@@ -46,6 +46,9 @@ export interface Product {
 
   /* ─── Signals / ranking ─── */
   popularity?: number;
+  averageRating?: number;
+  reviewCount?: number;
+  ratingDistribution?: Record<number, number>;
 
   /* ─── Seller (read-only exposure) ─── */
   seller?: {

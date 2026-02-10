@@ -17,7 +17,11 @@ export default async function IncomingOrdersPage() {
     redirect("/auth?redirect=/seller/orders/incoming")
   }
 
-  const orders = await getIncomingOrders(user.id)
+  // Get sellers where user has order.view permission
+  const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+  const allowedSellers = await getSellersWithPermission(payload, user.id, 'order.view');
+
+  const orders = await getIncomingOrders(allowedSellers)
   
   // Fetch seller's warehouses
   const warehousesRes = await payload.find({

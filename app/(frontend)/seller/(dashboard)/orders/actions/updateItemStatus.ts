@@ -36,12 +36,16 @@ export async function updateItemStatus(orderId: string, itemIdx: number, newStat
 
   const item = order.items[itemIdx];
 
-  // 3. Security check: Seller must own this item
+  // 3. Security check: Seller must have permission for this organization
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if ((user as any).role !== "admin") {
+      const { can } = await import("@/lib/rbac/permissions");
       const itemSellerId = typeof item.seller === 'string' ? item.seller : item.seller.id;
-      if (itemSellerId !== user.id) {
-        return { ok: false, error: "Unauthorized - You don't own this item" };
+      
+      const hasAccess = await can(payload, user.id, itemSellerId, 'order.update_status');
+      
+      if (!hasAccess) {
+        return { ok: false, error: "Unauthorized - You don't have permission to update this item's status" };
       }
   }
 

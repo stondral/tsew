@@ -147,7 +147,7 @@ export function ProductCard({ product }: ProductCardProps) {
             {product.name}
           </h3>
           <p className="text-xl font-black text-slate-900 tabular-nums font-mono tracking-tighter">
-            ${product.basePrice}
+            ₹{product.basePrice}
           </p>
         </div>
         <div className="flex items-center gap-3 mb-8">

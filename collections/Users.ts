@@ -87,12 +87,8 @@ export const Users: CollectionConfig = {
     update: ({ req: { user } }) => {
       const authUser = user as any
       if (!authUser) return false
-      if (authUser.role === "admin") return true
-      return {
-        id: {
-          equals: authUser.id,
-        },
-      } as any
+      // Only admins can update users
+      return authUser.role === "admin"
     },
     delete: ({ req: { user } }) => (user as any)?.role === "admin",
   },

@@ -7,7 +7,17 @@ import StoreSections from "@/components/storefront/StoreSections";
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const SITE_URL = process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+// Use localhost in development, but allow production URL override
+const getBaseUrl = () => {
+  // In production, use the NEXT_PUBLIC_PAYLOAD_URL or NEXT_PUBLIC_FRONTEND_URL
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+  }
+  // In development, always use localhost to avoid cross-server issues
+  return 'http://localhost:3000';
+};
+
+const SITE_URL = getBaseUrl();
 
 export default async function HomePage() {
   const sellerContext = await getSellerFromHeaders();
@@ -54,15 +64,16 @@ export default async function HomePage() {
 
   // PLATFORM DEFAULT - Fetch featured products via API
   try {
-    const productsRes = await fetch(`${SITE_URL}/api/products?type=featured&limit=16`, {
+    // Use relative URL for server-side fetch to ensure it hits the same server (dev or prod)
+    const productsRes = await fetch(`${SITE_URL}/api/products?type=featured&limit=16&t=${Date.now()}`, {
       cache: 'no-store',
+      next: { revalidate: 0 },
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
     const { products: featuredProducts } = await productsRes.json();
-    console.log(`🏠 HomePage: Found ${featuredProducts?.length || 0} featured products`);
 
     return (
       <>

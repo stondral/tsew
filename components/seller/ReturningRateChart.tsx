@@ -26,7 +26,7 @@ export function ReturningRateChart() {
           <p className="text-sm text-muted-foreground font-medium">Income in the last 28 days</p>
         </div>
         <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-black mr-2">$42,379</h2>
+            <h2 className="text-2xl font-black mr-2">₹42,379</h2>
             <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full text-xs font-black">+2.5%</span>
             <Button variant="ghost" size="icon" className="ml-2">
                 <Download className="h-4 w-4 text-muted-foreground" />

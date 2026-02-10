@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Star,
   Heart,
   Share2,
   ShieldCheck,
@@ -23,7 +22,7 @@ import { Product } from "@/lib/models/domain/product";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import {
   Accordion,
   AccordionContent,
@@ -34,44 +33,53 @@ import { cn } from "@/lib/utils";
 
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import VariantSelector from "./VariantSelector";
-import QuantitySelector from "./QuantitySelector";
-import ProductReviews from "./ProductReviews";
+import { useWishlist } from "./WishlistContext";
+import { useCart } from "@/components/cart/CartContext";
+import { toast } from "sonner";
+import StarRating from "./StarRating";
+import ReviewSection from "./ReviewSection";
+import { useRouter } from "next/navigation";
 
 interface ProductDetailClientProps {
   product: Product;
   images: string[];
 }
 
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={cn(
-            "w-4 h-4",
-            star <= rating
-              ? "fill-amber-400 text-amber-400"
-              : "fill-gray-200 text-gray-200",
-          )}
-        />
-      ))}
-    </div>
-  );
-}
 
 export default function ProductDetailClient({
   product,
   images,
 }: ProductDetailClientProps) {
+  const router = useRouter();
+  const { addToCart } = useCart();
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     product.variants?.[0]?.id ?? null,
   );
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, _setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isWishlisted: checkWishlisted, toggleWishlist } = useWishlist();
+  const isWishlisted = checkWishlisted(product.id || "");
   const [isZoomOpen, setIsZoomOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: product.name,
+      text: product.description?.slice(0, 100),
+      url: typeof window !== 'undefined' ? window.location.href : '',
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (err) {
+      console.error("Error sharing:", err);
+    }
+  };
 
   // Synchronize scroll on thumbnail click
   useEffect(() => {
@@ -83,6 +91,21 @@ export default function ProductDetailClient({
       }
     }
   }, [selectedImageIndex]);
+
+  const handleBuyNow = async () => {
+    try {
+      if (isOutOfStock) {
+        toast.error("This product is currently out of stock.");
+        return;
+      }
+      
+      addToCart(product.id, selectedVariantId, quantity);
+      router.push("/checkout");
+    } catch (err) {
+      console.error("Buy Now failed:", err);
+      toast.error("Something went wrong. Please try again.");
+    }
+  };
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -195,7 +218,6 @@ export default function ProductDetailClient({
                       alt={`${product.name} ${i + 1}`}
                       fill
                       className="object-contain p-4"
-                      unoptimized
                       priority={i === 0}
                     />
                   </div>
@@ -231,7 +253,7 @@ export default function ProductDetailClient({
                     "rounded-full bg-white/90 backdrop-blur shadow-lg hover:bg-white transition-all",
                     isWishlisted && "text-red-500",
                   )}
-                  onClick={() => setIsWishlisted(!isWishlisted)}
+                  onClick={() => toggleWishlist(product.id)}
                 >
                   <Heart
                     className={cn("w-5 h-5", isWishlisted && "fill-current")}
@@ -241,6 +263,7 @@ export default function ProductDetailClient({
                   variant="secondary"
                   size="icon"
                   className="rounded-full bg-white/90 backdrop-blur shadow-lg hover:bg-white"
+                  onClick={handleShare}
                 >
                   <Share2 className="w-5 h-5" />
                 </Button>
@@ -267,7 +290,6 @@ export default function ProductDetailClient({
                       alt={`${product.name} thumbnail ${i + 1}`}
                       fill
                       className="object-cover"
-                      unoptimized
                     />
                   </button>
                 ))}
@@ -286,8 +308,9 @@ export default function ProductDetailClient({
                 {product.category.name}
               </Badge>
               <div className="flex items-center gap-2">
-                <StarRating rating={5} />
-                <span className="text-sm text-gray-600">(156 reviews)</span>
+                <StarRating rating={product.averageRating || 0} />
+                <span className="text-sm font-bold text-slate-900">{product.averageRating || 0}</span>
+                <span className="text-sm text-gray-500">({product.reviewCount || 0} reviews)</span>
               </div>
             </div>
 
@@ -362,27 +385,22 @@ export default function ProductDetailClient({
               />
             )}
 
-            {/* Quantity & Add to Cart */}
+            {/* Add to Cart Actions */}
             <div className="space-y-4">
-              <QuantitySelector
-                quantity={quantity}
-                maxQuantity={currentStock}
-                onQuantityChange={setQuantity}
-                disabled={isOutOfStock}
-              />
-
               <div className="flex gap-3">
                 <AddToCartButton
                   product={product}
                   variantId={selectedVariantId}
-                  quantity={quantity}
+                  quantity={1}
                   size="lg"
                   className="flex-1 h-14 text-lg rounded-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-200"
                 />
                 <Button
                   variant="outline"
                   size="lg"
-                  className="h-14 px-8 rounded-full border-2 border-orange-500 text-orange-600 hover:bg-orange-50"
+                  className="h-14 px-8 rounded-full border-2 border-orange-500 text-orange-600 hover:bg-orange-50 font-bold"
+                  onClick={handleBuyNow}
+                  disabled={isOutOfStock}
                 >
                   Buy Now
                 </Button>
@@ -475,161 +493,146 @@ export default function ProductDetailClient({
           </div>
         </div>
 
-        {/* Product Details Tabs */}
-        <div className="mt-16">
-          <Tabs defaultValue="description" className="w-full">
-            <TabsList className="w-full justify-start bg-white border-b rounded-none h-auto p-0 gap-8 overflow-x-auto scrollbar-hide flex-nowrap min-w-full">
-              <TabsTrigger
-                value="description"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:shadow-none pb-4 px-0"
-              >
-                Description
-              </TabsTrigger>
-              <TabsTrigger
-                value="specifications"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:shadow-none pb-4 px-0"
-              >
-                Specifications
-              </TabsTrigger>
-              <TabsTrigger
-                value="reviews"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:shadow-none pb-4 px-0"
-              >
-                Reviews (156)
-              </TabsTrigger>
-              <TabsTrigger
-                value="shipping"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-orange-500 data-[state=active]:text-orange-600 data-[state=active]:shadow-none pb-4 px-0"
-              >
-                Shipping & Returns
-              </TabsTrigger>
-            </TabsList>
+        {/* Product Details - Amazon Style Stacked Cards */}
+        <div className="mt-8 md:mt-12 space-y-4">
+          {/* Description Card */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-4 md:px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-base md:text-lg font-bold text-gray-900">Description</h2>
+            </div>
+            <div className="px-4 md:px-6 py-4 md:py-6">
+              <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-2 md:mb-3">
+                About this product
+              </h3>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed whitespace-pre-wrap">
+                {product.description}
+              </p>
+            </div>
+          </div>
 
-            <TabsContent value="description" className="mt-8">
-              <div className="prose prose-gray max-w-none">
-                <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    About this product
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                    {product.description}
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="specifications" className="mt-8">
-              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                  Product Specifications
-                </h3>
-
-                {/* Variant attributes if selected */}
-                {selectedVariant?.attributes &&
-                  selectedVariant.attributes.length > 0 && (
-                    <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide mb-3">
-                        Selected Variant
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {selectedVariant.attributes.map((attr, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between py-3 border-b border-gray-100"
-                          >
-                            <span className="text-gray-600">{attr.name}</span>
-                            <span className="font-medium text-gray-900">
-                              {attr.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+          {/* Specifications Card */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-4 md:px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-base md:text-lg font-bold text-gray-900">Specifications</h2>
+            </div>
+            <div className="px-4 md:px-6 py-4 md:py-6">
+              {/* Variant attributes if selected */}
+              {selectedVariant?.attributes &&
+                selectedVariant.attributes.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-xs md:text-sm font-semibold text-orange-600 uppercase tracking-wide mb-3">
+                      Selected Variant
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedVariant.attributes.map((attr, idx) => (
+                        <div
+                          key={idx}
+                          className="flex justify-between py-2 md:py-3 border-b border-gray-100 text-sm md:text-base"
+                        >
+                          <span className="text-gray-600">{attr.name}</span>
+                          <span className="font-medium text-gray-900">
+                            {attr.value}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Category</span>
-                    <span className="font-medium text-gray-900">
-                      {product.category.name}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">SKU</span>
-                    <span className="font-mono text-gray-900">
-                      {currentSku}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Availability</span>
-                    <span
-                      className={cn(
-                        "font-medium",
-                        currentStock > 0 ? "text-green-600" : "text-red-600",
-                      )}
-                    >
-                      {currentStock > 0 ? "In Stock" : "Out of Stock"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-3 border-b border-gray-100">
-                    <span className="text-gray-600">Return Policy</span>
-                    <span className="font-medium text-gray-900">
-                      {product.refundPolicy || "Contact Customer Care"}
-                    </span>
-                  </div>
+              <div className="space-y-2">
+                <div className="flex justify-between py-2 md:py-3 border-b border-gray-100 text-sm md:text-base">
+                  <span className="text-gray-600">Category</span>
+                  <span className="font-medium text-gray-900">
+                    {product.category.name}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 md:py-3 border-b border-gray-100 text-sm md:text-base">
+                  <span className="text-gray-600">SKU</span>
+                  <span className="font-mono text-gray-900 text-xs md:text-sm">
+                    {currentSku}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 md:py-3 border-b border-gray-100 text-sm md:text-base">
+                  <span className="text-gray-600">Availability</span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      currentStock > 0 ? "text-green-600" : "text-red-600",
+                    )}
+                  >
+                    {currentStock > 0 ? "In Stock" : "Out of Stock"}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 md:py-3 border-b border-gray-100 text-sm md:text-base">
+                  <span className="text-gray-600">Return Policy</span>
+                  <span className="font-medium text-gray-900 text-right">
+                    {product.refundPolicy || "Contact Customer Care"}
+                  </span>
                 </div>
               </div>
-            </TabsContent>
+            </div>
+          </div>
 
-            <TabsContent value="reviews" className="mt-8">
-              <ProductReviews productId={product.id} />
-            </TabsContent>
+          {/* Reviews Card */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-4 md:px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-base md:text-lg font-bold text-gray-900">
+                Reviews ({product.reviewCount || 0})
+              </h2>
+            </div>
+            <div className="px-4 md:px-6 py-4 md:py-6">
+              <ReviewSection productId={product.id} />
+            </div>
+          </div>
 
-            <TabsContent value="shipping" className="mt-8">
-              <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="shipping">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      Shipping Information
-                    </AccordionTrigger>
-                    <AccordionContent className="text-gray-600 space-y-3">
-                      <p>• Free shipping on orders above ₹499</p>
-                      <p>• Standard delivery: 3-5 business days</p>
-                      <p>
-                        • Express delivery: 1-2 business days (additional
-                        charges apply)
-                      </p>
-                      <p>• We ship to all pin codes across India</p>
-                    </AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="returns">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      Return & Refund Policy
-                    </AccordionTrigger>
-                    <AccordionContent className="text-gray-600 space-y-3">
-                      <p>
-                        <strong>Return Window:</strong>{" "}
-                        {product.refundPolicy || "Contact Customer Care"}
-                      </p>
-                      <p>• Items must be unused and in original packaging</p>
-                      <p>• Refunds processed within 5-7 business days</p>
-                      <p>• Free return pickup for eligible items</p>
-                    </AccordionContent>
-                  </AccordionItem>
-                  <AccordionItem value="warranty">
-                    <AccordionTrigger className="text-lg font-semibold">
-                      Warranty & Guarantee
-                    </AccordionTrigger>
-                    <AccordionContent className="text-gray-600 space-y-3">
-                      <p>• 100% Authentic products guaranteed</p>
-                      <p>• Manufacturer warranty applicable where stated</p>
-                      <p>• Contact seller for warranty claims</p>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </div>
-            </TabsContent>
-          </Tabs>
+          {/* Shipping & Returns Card */}
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="px-4 md:px-6 py-4 bg-gray-50 border-b border-gray-200">
+              <h2 className="text-base md:text-lg font-bold text-gray-900">Shipping & Returns</h2>
+            </div>
+            <div className="px-4 md:px-6 py-4 md:py-6">
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="shipping">
+                  <AccordionTrigger className="text-sm md:text-base font-semibold">
+                    Shipping Information
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm md:text-base text-gray-600 space-y-2 md:space-y-3">
+                    <p>• Free shipping on orders above ₹499</p>
+                    <p>• Standard delivery: 3-5 business days</p>
+                    <p>
+                      • Express delivery: 1-2 business days (additional
+                      charges apply)
+                    </p>
+                    <p>• We ship to all pin codes across India</p>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="returns">
+                  <AccordionTrigger className="text-sm md:text-base font-semibold">
+                    Return & Refund Policy
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm md:text-base text-gray-600 space-y-2 md:space-y-3">
+                    <p>
+                      <strong>Return Window:</strong>{" "}
+                      {product.refundPolicy || "Contact Customer Care"}
+                    </p>
+                    <p>• Items must be unused and in original packaging</p>
+                    <p>• Refunds processed within 5-7 business days</p>
+                    <p>• Free return pickup for eligible items</p>
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="warranty">
+                  <AccordionTrigger className="text-sm md:text-base font-semibold">
+                    Warranty & Guarantee
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm md:text-base text-gray-600 space-y-2 md:space-y-3">
+                    <p>• 100% Authentic products guaranteed</p>
+                    <p>• Manufacturer warranty applicable where stated</p>
+                    <p>• Contact seller for warranty claims</p>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </div>
         </div>
       </div>
       <AnimatePresence>
@@ -664,7 +667,6 @@ export default function ProductDetailClient({
                   alt={product.name}
                   fill
                   className="object-contain"
-                  unoptimized
                 />
               </div>
             </motion.div>
@@ -679,7 +681,7 @@ export default function ProductDetailClient({
                     i === selectedImageIndex ? "border-orange-500 scale-110 shadow-lg shadow-orange-500/20" : "border-white/10 opacity-40 hover:opacity-100 hover:border-white/30"
                   )}
                 >
-                  <Image src={img} alt="thumb" fill className="object-cover" unoptimized />
+                  <Image src={img} alt="thumb" fill className="object-cover"  />
                 </button>
               ))}
             </div>

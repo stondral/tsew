@@ -5,7 +5,7 @@ import {
   TrendingUp, 
   TrendingDown, 
   Users, 
-  DollarSign, 
+  IndianRupee, 
   Package, 
   PieChart, 
   ShoppingCart,
@@ -24,7 +24,7 @@ const IconMap: Record<string, any> = {
   "layout-grid": LayoutGrid,
   "plus": Plus,
   "users": Users,
-  "dollar-sign": DollarSign,
+  "indian-rupee": IndianRupee,
   "package": Package,
   "pie-chart": PieChart,
   "shopping-cart": ShoppingCart,
@@ -110,7 +110,7 @@ function StatCard({ title, value, change, isPositive, icon, color }: StatItem) {
 
 export function StatsCards({ stats }: StatsCardsProps) {
   const items = stats || [
-    { title: "Total Revenue", value: "₹0", change: "0%", isPositive: true, icon: "dollar-sign", color: "amber" },
+    { title: "Total Revenue", value: "₹0", change: "0%", isPositive: true, icon: "indian-rupee", color: "amber" },
     { title: "Active Orders", value: "0", change: "0%", isPositive: true, icon: "shopping-cart", color: "indigo" },
     { title: "Active Products", value: "0", change: "0%", isPositive: true, icon: "package", color: "emerald" },
     { title: "Total Customers", value: "0", change: "0%", isPositive: true, icon: "users", color: "slate" },

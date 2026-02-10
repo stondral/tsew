@@ -9,6 +9,7 @@ import { User } from "@/payload-types";
 interface ExtendedUser extends User {
   role?: 'admin' | 'seller' | 'sellerEmployee' | 'user';
   subscriptionStatus?: 'active' | 'inactive' | 'pending' | 'cancelled';
+  username?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -169,6 +170,33 @@ export async function createProduct(data: any) {
       collection: "products",
       data: insertData,
     });
+
+    // Notify Admins
+    try {
+      const admins = await payload.find({
+        collection: 'users',
+        where: { role: { equals: 'admin' } },
+      });
+
+      const frontendURL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+      const { getEmailTemplate } = await import("@/lib/email-templates");
+
+      for (const admin of admins.docs) {
+        const emailHtml = getEmailTemplate('product-submission-admin', {
+          productName: product.name,
+          sellerName: user.username || user.email,
+          approvalUrl: `${frontendURL}/administrator/products`,
+        });
+
+        await payload.sendEmail({
+          to: admin.email,
+          subject: `🚀 New Product Submission: ${product.name}`,
+          html: emailHtml,
+        });
+      }
+    } catch (emailErr) {
+      console.error("Failed to notify admins of product submission:", emailErr);
+    }
 
     revalidatePath("/seller/products");
  

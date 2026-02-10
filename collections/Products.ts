@@ -176,7 +176,6 @@ export const Products: CollectionConfig = {
           },
           limit: 1,
         })
-
         if (expired.totalDocs > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (req.payload as any).update({
@@ -192,6 +191,14 @@ export const Products: CollectionConfig = {
         }
       },
     ],
+    // 🔥 AUTO-UPDATE RATINGS
+    afterRead: [
+      ({ doc }) => {
+        // We could calculate this on the fly or rely on hooks. 
+        // For now, let's just make sure fields exist.
+        return doc;
+      }
+    ]
   },
 
   /* ─────────────────────────────
@@ -212,6 +219,34 @@ export const Products: CollectionConfig = {
       admin: {
         position: 'sidebar',
         description: 'Featured products appear on the home page',
+      },
+    },
+
+    {
+      name: 'averageRating',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+
+    {
+      name: 'reviewCount',
+      type: 'number',
+      defaultValue: 0,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'ratingDistribution',
+      type: 'json',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
       },
     },
 

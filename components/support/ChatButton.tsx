@@ -60,9 +60,9 @@ export function ChatButton() {
   // If not logged in, show a different button or state
   if (!user) {
     return (
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-4">
+      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[100] flex flex-col items-end gap-3 md:gap-4">
         {isOpen && (
-          <div className="w-[400px] p-10 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col items-center justify-center animate-in slide-in-from-bottom-5 duration-300">
+          <div className="w-[calc(100vw-32px)] md:w-[400px] p-8 md:p-10 bg-white dark:bg-slate-900 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col items-center justify-center animate-in slide-in-from-bottom-5 duration-300">
              <div className="h-20 w-20 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mb-6">
                 <MessageCircle className="h-10 w-10 text-emerald-600" />
              </div>
@@ -79,23 +79,23 @@ export function ChatButton() {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-              "h-16 w-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group border-4 border-white dark:border-slate-800",
+              "h-14 w-14 md:h-16 md:w-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group border-4 border-white dark:border-slate-800",
               isOpen ? "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rotate-90" : "bg-[#075e54] text-white hover:scale-110 active:scale-95"
           )}
         >
-          {isOpen ? <X className="h-8 w-8" /> : <MessageCircle className="h-8 w-8" />}
+          {isOpen ? <X className="h-6 w-6 md:h-8 md:w-8" /> : <MessageCircle className="h-6 w-6 md:h-8 md:w-8" />}
         </button>
       </div>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-4">
+    <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[100] flex flex-col items-end gap-3 md:gap-4">
       {/* Chat Window Popup */}
       {isOpen && (
-        <div className="w-[400px] h-[600px] max-h-[calc(100vh-120px)] bg-transparent dark:bg-transparent rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300 ring-1 ring-black/5">
-          <div className="p-6 bg-[#075e54] text-white flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
+        <div className="w-[calc(100vw-32px)] md:w-[400px] h-[600px] max-h-[calc(100vh-100px)] md:max-h-[calc(100vh-120px)] bg-transparent dark:bg-transparent rounded-[2rem] md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 duration-300 ring-1 ring-black/5">
+          <div className="p-4 md:p-6 bg-[#075e54] text-white flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2 md:gap-3">
               <div className="h-10 w-10 bg-white/20 rounded-xl flex items-center justify-center">
                 <MessageCircle className="h-6 w-6" />
               </div>
@@ -142,11 +142,11 @@ export function ChatButton() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-            "h-16 w-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group border-4 border-white dark:border-slate-800",
+            "h-14 w-14 md:h-16 md:w-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group border-4 border-white dark:border-slate-800",
             isOpen ? "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rotate-90" : "bg-[#075e54] text-white hover:scale-110 active:scale-95 shadow-emerald-500/40"
         )}
       >
-        {isOpen ? <X className="h-8 w-8" /> : <MessageCircle className="h-8 w-8 group-hover:scale-110 transition-transform" />}
+        {isOpen ? <X className="h-6 w-6 md:h-8 md:w-8" /> : <MessageCircle className="h-6 w-6 md:h-8 md:w-8 group-hover:scale-110 transition-transform" />}
       </button>
 
       {/* Tooltip-like badge if order page */}

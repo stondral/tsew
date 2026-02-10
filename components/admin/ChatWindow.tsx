@@ -65,7 +65,7 @@ export function ChatWindow({ ticketId, userId, senderType, orderContext, status,
 
   const handleSend = () => {
     if (inputValue.trim()) {
-      const orderId = typeof orderContext === 'object' ? orderContext.id : orderContext;
+      const orderId = (orderContext && typeof orderContext === 'object') ? orderContext.id : orderContext;
       sendMessage(inputValue, orderId);
       setInputValue("");
     }
@@ -119,8 +119,8 @@ export function ChatWindow({ ticketId, userId, senderType, orderContext, status,
 
       {/* Templates Overlay - Admin Only */}
       {senderType === 'admin' && showTemplates && (
-        <div className="absolute bottom-[104px] left-0 right-0 px-10 z-30 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="max-w-5xl mx-auto bg-white/95 dark:bg-[#202c33] backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)] ring-1 ring-black/5 dark:ring-white/10 p-6">
+        <div className="absolute bottom-[80px] md:bottom-[104px] left-0 right-0 px-4 md:px-10 z-30 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="max-w-5xl mx-auto bg-white/95 dark:bg-[#202c33] backdrop-blur-xl rounded-[1.5rem] md:rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.3)] ring-1 ring-black/5 dark:ring-white/10 p-4 md:p-6">
             <div className="flex items-center justify-between mb-6 px-4">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#075e54] dark:text-emerald-400">Response_Templates</h4>
               <button 
@@ -152,13 +152,13 @@ export function ChatWindow({ ticketId, userId, senderType, orderContext, status,
       {/* Messages Area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-10 pt-4 pb-6 space-y-8 custom-scrollbar relative z-10"
+        className="flex-1 overflow-y-auto px-4 md:px-10 pt-4 pb-6 space-y-6 md:space-y-8 custom-scrollbar relative z-10"
       >
         {groupedMessages.map((group, idx) => (
             <div
                 key={idx}
                 className={cn(
-                    "flex flex-col max-w-[70%] gap-1.5",
+                    "flex flex-col max-w-[85%] md:max-w-[70%] gap-1.5",
                     group.isMe ? "ml-auto items-end" : "items-start"
                 )}
             >
@@ -178,7 +178,7 @@ export function ChatWindow({ ticketId, userId, senderType, orderContext, status,
                             <div 
                                 key={msg.id || i}
                                 className={cn(
-                                    "px-6 py-4 text-[14px] leading-relaxed font-medium transition-all relative group shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.05]",
+                                    "px-4 md:px-6 py-3 md:py-4 text-[13px] md:text-[14px] leading-relaxed font-medium transition-all relative group shadow-sm ring-1 ring-black/[0.03] dark:ring-white/[0.05]",
                                     group.isMe 
                                         ? "bg-[#dcf8c6] dark:bg-[#005c4b] text-slate-800 dark:text-emerald-50 rounded-tr-[4px]" 
                                         : "bg-white dark:bg-[#202c33] text-slate-700 dark:text-slate-300 rounded-tl-[4px]",

@@ -13,15 +13,15 @@ import {
   Truck,
   CheckCircle2,
   Clock,
-  ShieldCheck,
-  ExternalLink
+  ShieldCheck
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { resolveMediaUrl } from "@/lib/utils";
+import { resolveMediaUrl, cn } from "@/lib/utils";
 import Image from "next/image";
 import InvoiceButton from "@/components/orders/InvoiceButton";
 import { HelpButton } from "@/components/orders/HelpButton";
+import { ShipmentTracking } from "@/components/orders/ShipmentTracking";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -87,18 +87,20 @@ export default async function OrderDetailsPage({ params }: PageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/30 py-8 md:py-12 px-4 md:px-6 overflow-x-hidden">
+    <div className="min-h-screen bg-gray-50/30 py-6 md:py-12 px-4 md:px-6 overflow-x-hidden">
       <div className="max-w-4xl mx-auto">
         {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6 md:mb-8">
            <Link 
              href="/orders" 
-             className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-orange-600 transition-colors bg-white px-3 md:px-4 py-2 rounded-xl border border-gray-100 shadow-sm"
+             className="inline-flex items-center justify-center text-sm font-medium text-gray-500 hover:text-orange-600 transition-colors bg-white px-4 py-2.5 md:py-2 rounded-xl border border-gray-100 shadow-sm"
            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Orders
            </Link>
-            <InvoiceButton order={order} address={address} />
+            <div className="flex-1 sm:flex-none">
+              <InvoiceButton order={order} address={address} />
+            </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -131,25 +133,25 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                       </Badge>
                     )}
                     
-                    <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 flex flex-wrap items-center gap-2 md:gap-3">
+                    <h1 className="text-xl md:text-3xl font-extrabold text-gray-900 mb-6 flex flex-wrap items-center gap-2 md:gap-3">
                         Order Details
                         <div className="hidden md:block h-2 w-2 rounded-full bg-gray-300" />
-                        <span className="text-gray-400 text-lg md:text-3xl">#{order.id.slice(-6)}</span>
+                        <span className="text-gray-400 text-base md:text-3xl">#{order.id.slice(-6)}</span>
                     </h1>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                             <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Status</p>
-                              <div className="flex items-center gap-2">
+                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                        <div className="p-3 md:p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                             <p className="text-[10px] md:text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Status</p>
+                              <div className="flex items-center gap-1.5 md:gap-2">
                                 {getStatusIcon(order.status)}
-                                <span className="font-bold text-gray-800 uppercase tracking-wider text-xs">{order.status}</span>
+                                <span className="font-bold text-gray-800 uppercase tracking-wider text-[10px] md:text-xs">{order.status}</span>
                               </div>
                         </div>
-                        <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                             <p className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Payment</p>
-                             <div className="flex items-center gap-2">
-                                <CreditCard className="w-5 h-5 text-gray-400" />
-                                <span className={order.paymentStatus === 'paid' ? 'text-green-600 font-bold' : 'text-gray-800 font-bold'}>
+                        <div className="p-3 md:p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                             <p className="text-[10px] md:text-xs uppercase tracking-wider text-gray-400 font-bold mb-1">Payment</p>
+                             <div className="flex items-center gap-1.5 md:gap-2">
+                                <CreditCard className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+                                <span className={cn("font-bold text-[10px] md:text-xs", order.paymentStatus === 'paid' ? 'text-green-600' : 'text-gray-800')}>
                                     {order.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
                                 </span>
                              </div>
@@ -170,8 +172,8 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                 <div className="divide-y divide-gray-50">
                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {order.items.map((item: any, idx: number) => (
-                        <div key={idx} className="p-4 md:p-6 flex flex-col xs:flex-row items-start xs:items-center gap-4 md:gap-6 hover:bg-gray-50/30 transition-colors">
-                            <div className="w-14 h-14 xs:w-16 xs:h-16 md:w-20 md:h-20 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-orange-100 overflow-hidden relative">
+                        <div key={idx} className="p-4 md:p-6 flex items-start sm:items-center gap-4 md:gap-6 hover:bg-gray-50/30 transition-colors overflow-hidden">
+                            <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl flex items-center justify-center flex-shrink-0 border border-orange-100 overflow-hidden relative">
                                  {item.productImage ? (
                                    <Image 
                                      src={resolveMediaUrl(item.productImage)} 
@@ -183,16 +185,16 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                    <Package className="w-8 h-8 text-orange-200" />
                                  )}
                             </div>
-                            <div className="flex-1 min-w-0 w-full xs:w-auto">
-                                <h4 className="font-bold text-gray-900 mb-1 truncate">{item.productName}</h4>
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-sm md:text-base text-gray-900 mb-1 truncate">{item.productName}</h4>
                                 <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                                    <p className="text-xs md:text-sm text-gray-500 font-medium whitespace-nowrap">Qty: <span className="text-gray-800 font-bold">{item.quantity}</span></p>
-                                    <div className="hidden xs:block h-1 w-1 bg-gray-300 rounded-full" />
-                                    <p className="text-xs md:text-sm text-gray-500 font-medium whitespace-nowrap">Price: <span className="text-gray-800 font-bold">₹{item.priceAtPurchase.toLocaleString("en-IN")}</span></p>
+                                    <p className="text-[10px] md:text-sm text-gray-500 font-medium whitespace-nowrap">Qty: <span className="text-gray-800 font-bold">{item.quantity}</span></p>
+                                    <div className="hidden sm:block h-1 w-1 bg-gray-300 rounded-full" />
+                                    <p className="text-[10px] md:text-sm text-gray-500 font-medium whitespace-nowrap">Price: <span className="text-gray-800 font-bold">₹{item.priceAtPurchase.toLocaleString("en-IN")}</span></p>
                                 </div>
                             </div>
-                            <div className="text-left xs:text-right w-full xs:w-auto pt-2 xs:pt-0 border-t xs:border-t-0 border-gray-50">
-                                <p className="font-black text-gray-900">₹{(item.priceAtPurchase * item.quantity).toLocaleString("en-IN")}</p>
+                            <div className="text-right flex-shrink-0">
+                                <p className="font-black text-sm md:text-base text-gray-900">₹{(item.priceAtPurchase * item.quantity).toLocaleString("en-IN")}</p>
                             </div>
                         </div>
                     ))}
@@ -202,30 +204,9 @@ export default async function OrderDetailsPage({ params }: PageProps) {
 
           {/* Sidebar Info */}
           <div className="space-y-6">
-            {/* Tracking Radar (Newly Added) */}
+            {/* Live tracking (Replacing static Shipment Radar) */}
             {order.delivery?.trackingId && (
-              <div className="bg-white p-4 md:p-6 rounded-3xl border border-blue-100 shadow-sm bg-gradient-to-br from-white to-blue-50/30">
-                  <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <Truck className="w-5 h-5 text-blue-500" />
-                      Shipment Radar
-                  </h3>
-                  <div className="space-y-4">
-                      <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-100/50">
-                          <p className="text-[10px] uppercase tracking-wider text-blue-400 font-black mb-1">Waybill ID</p>
-                          <p className="font-mono font-bold text-blue-700 text-sm">{order.delivery.trackingId}</p>
-                      </div>
-                      <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-12 font-bold transition-all shadow-lg shadow-blue-200">
-                          <Link 
-                            href={`https://www.delhivery.com/track/package/${order.delivery.trackingId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Track Live Status
-                            <ExternalLink className="w-4 h-4 ml-2" />
-                          </Link>
-                      </Button>
-                  </div>
-              </div>
+              <ShipmentTracking orderId={order.id} trackingId={order.delivery.trackingId} />
             )}
 
             {/* Delivery Address */}

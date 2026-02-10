@@ -69,8 +69,8 @@ export async function acceptOrderAction(
         const getShipmentPayload = () => {
           // Build complete address string safely
           const addressParts = [];
-          if (address.addressLine1) addressParts.push(address.addressLine1);
-          if (address.addressLine2) addressParts.push(address.addressLine2);
+          if (address.address) addressParts.push(address.address);
+          if (address.apartment) addressParts.push(address.apartment);
           if (address.city) addressParts.push(address.city);
           if (address.state) addressParts.push(address.state);
           const completeAddress = addressParts.length > 0 ? addressParts.join(", ") : "N/A";
@@ -80,11 +80,11 @@ export async function acceptOrderAction(
           const payload = {
             pickup_location: warehouse.label,
             origin: warehouse.postalCode, // Pincode for origin
-            consignee: address.fullName || address.name || "Customer",
-            name: address.fullName || address.name || "Customer",
+            consignee: `${address.firstName || ""} ${address.lastName || ""}`.trim() || "Customer",
+            name: `${address.firstName || ""} ${address.lastName || ""}`.trim() || "Customer",
             add: completeAddress,
             pin: address.postalCode,
-            phone: address.phoneNumber || "0000000000",
+            phone: address.phone || "0000000000",
             order: order.orderNumber || order.id,
             payment_mode: isCOD ? ('COD' as const) : ('Prepaid' as const),
             amount: isCOD ? String(order.total) : '0', // COD amount for collection
@@ -258,8 +258,8 @@ export async function updateOrderAddressAction(
         firstName: addressData.firstName,
         lastName: addressData.lastName,
         phone: addressData.phone,
-        addressLine1: addressData.address,
-        addressLine2: addressData.apartment,
+        address: addressData.address,
+        apartment: addressData.apartment,
         city: addressData.city,
         state: addressData.state,
         postalCode: addressData.postalCode,
@@ -416,5 +416,52 @@ export async function getDelhiveryStatsAction(
   } catch (error: unknown) {
     console.error("Failed to fetch Delhivery stats:", error);
     return { ok: false, error: (error as Error).message || "Failed to fetch delivery stats" };
+  }
+}
+
+export async function searchOrderAction(orderNumber: string) {
+  const payload = await getPayload({ config });
+  const requestHeaders = await headers();
+  const { user } = await payload.auth({ headers: requestHeaders });
+
+  if (!user || ((user as { role?: string }).role !== 'seller' && (user as { role?: string }).role !== 'admin' && (user as { role?: string }).role !== 'sellerEmployee')) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  try {
+    const orders = await payload.find({
+      collection: "orders",
+      where: {
+        orderNumber: { equals: orderNumber.trim() },
+      },
+      depth: 0,
+      limit: 1,
+      overrideAccess: true, // We will manually verify ownership
+    });
+
+    if (orders.docs.length === 0) {
+      return { ok: false, error: "Order not found" };
+    }
+
+    const order = orders.docs[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userWithRole = user as any;
+
+    // Ownership check for sellers/employees
+    if (userWithRole.role !== 'admin') {
+      const { getSellersWithPermission } = await import("@/lib/rbac/permissions");
+      const allowedSellers = await getSellersWithPermission(payload, userWithRole.id, 'order.view');
+      
+      const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
+      
+      if (!allowedSellers.includes(orderSellerId)) {
+        return { ok: false, error: "Order not found or access denied" };
+      }
+    }
+
+    return { ok: true, id: order.id };
+  } catch (error) {
+    console.error("Order search error:", error);
+    return { ok: false, error: "Something went wrong" };
   }
 }

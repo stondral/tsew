@@ -1,16 +1,17 @@
 import { getPayload } from "payload";
 import config from "@/payload.config";
 
-export async function getIncomingOrders(sellerId: string) {
+export async function getIncomingOrders(sellerIds: string[]) {
   const payload = await getPayload({ config });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await (payload as any).find({
     collection: "orders",
     where: {
-      seller: { equals: sellerId },
+      seller: { in: sellerIds },
       status: { equals: "PENDING" }
     },
     sort: "-createdAt",
+    depth: 2,
     overrideAccess: true,
   });
   return data.docs;
@@ -39,10 +40,14 @@ export async function acceptOrder(
 
   if (!order) throw new Error("Order not found");
   
+  // Security check: Verify seller owns the order and it's PENDING
+  const { hasPermission } = await import('@/lib/rbac/permissions');
   const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
   
-  if (String(orderSellerId) !== String(sellerId)) {
-    throw new Error(`Unauthorized: Ownership mismatch.`);
+  const canUpdate = await hasPermission(payload, sellerId, String(orderSellerId), 'order.update_status');
+  
+  if (!canUpdate) {
+    throw new Error(`Unauthorized: You do not have permission to accept orders for this seller.`);
   }
 
   if (order.status !== "PENDING" && order.status !== "pending") {
@@ -93,9 +98,12 @@ export async function updateOrderShippingAddress(
 
   if (!order) throw new Error("Order not found");
 
+  const { hasPermission } = await import('@/lib/rbac/permissions');
   const orderSellerId = typeof order.seller === "object" ? order.seller.id : order.seller;
 
-  if (String(orderSellerId) !== String(sellerId)) {
+  const canEdit = await hasPermission(payload, sellerId, String(orderSellerId), 'order.view'); // Minimum view permission to edit address? Or should it be update?
+
+  if (!canEdit) {
     throw new Error(`Unauthorized: Ownership mismatch.`);
   }
 

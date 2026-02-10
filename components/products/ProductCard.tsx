@@ -3,12 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Heart, Star } from "lucide-react";
+import { Heart } from "lucide-react";
 import { useState, useRef } from "react";
 import { Product } from "@/lib/models/domain/product";
 import { Badge } from "@/components/ui/badge";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import { resolveMediaUrl } from "@/lib/media";
+import { useWishlist } from "./WishlistContext";
+import StarRating from "./StarRating";
+import { formatNumber } from "@/lib/formatNumber";
 
 interface Props {
   product: Product & {
@@ -19,7 +22,9 @@ interface Props {
 }
 
 export default function ProductCard({ product, view = "grid", priority = false }: Props) {
-  const [wishlisted, setWishlisted] = useState(false);
+  const { isWishlisted, toggleWishlist } = useWishlist();
+  const wishlisted = isWishlisted(product.id);
+  
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     product.variants?.[0]?.id ?? null,
   );
@@ -111,7 +116,7 @@ export default function ProductCard({ product, view = "grid", priority = false }
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setWishlisted(!wishlisted);
+              toggleWishlist(product.id);
             }}
             className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow"
           >
@@ -180,9 +185,11 @@ export default function ProductCard({ product, view = "grid", priority = false }
                 )}
               </div>
               {!isList && (
-                <div className="flex items-center gap-1 text-[11px] text-gray-500 font-medium">
-                  <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                  {product.popularity}
+                <div className="flex items-center gap-1.5 pt-1">
+                  <StarRating rating={product.averageRating || 0} size={12} />
+                  <span className="text-[10px] text-slate-500 font-bold">
+                    ({formatNumber(product.reviewCount)})
+                  </span>
                 </div>
               )}
             </div>

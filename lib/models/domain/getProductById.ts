@@ -90,6 +90,9 @@ export async function getProductById(
 
     /* Signals */
     popularity: p.popularity,
+    averageRating: p.averageRating || 0,
+    reviewCount: p.reviewCount || 0,
+    ratingDistribution: p.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
 
     /* Seller */
     seller: p.seller

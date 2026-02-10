@@ -34,12 +34,11 @@ interface OrderAddress {
   firstName?: string;
   lastName?: string;
   phone?: string;
-  addressLine1?: string;
-  addressLine2?: string;
+  address?: string;
+  apartment?: string;
   city?: string;
   state?: string;
   postalCode?: string;
-  pincode?: string;
 }
 
 interface Order {
@@ -237,7 +236,7 @@ function OrderCard({ order, warehouses }: { order: Order, warehouses: Warehouse[
               <MapPin className="w-5 h-5 text-amber-500 mt-1 shrink-0" />
               <div className="flex flex-col">
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {address?.addressLine1 || "No street address"}
+                  {address?.address}{address?.apartment ? `, ${address.apartment}` : ""}
                 </p>
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">
                   {address?.city}, {address?.state} {address?.postalCode}

@@ -4,7 +4,9 @@ const getSiteUrl = () => {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return process.env.NEXT_PUBLIC_PAYLOAD_URL?.replace(/\/+$/, "") ?? "http://localhost:3000";
+  // Prioritize frontend URL for internal linking, fallback to Payload URL
+  const url = process.env.NEXT_PUBLIC_FRONTEND_URL || process.env.NEXT_PUBLIC_PAYLOAD_URL || "http://localhost:3000";
+  return url.replace(/\/+$/, "");
 };
 
 export const PLACEHOLDER = "/placeholder.png";
