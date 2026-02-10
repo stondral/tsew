@@ -76,12 +76,19 @@ export default async function ProductsPage({ searchParams }: PageProps) {
             </div>
           </div>
           
-          <ProductSort currentSort={sort || "newest"} />
+          <ProductSort 
+            currentSort={sort || "newest"} 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            categories={categoriesRes.docs.map((c: any) => ({ id: c.id, name: c.name, slug: c.slug }))}
+            currentCategory={category}
+            currentMinPrice={minPrice}
+            currentMaxPrice={maxPrice}
+          />
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10">
-          {/* Sidebar Filters */}
-          <aside className="w-full lg:w-72 shrink-0">
+          {/* Sidebar Filters - Hidden on Mobile, shown on Large Screens */}
+          <aside className="hidden lg:block w-full lg:w-72 shrink-0">
             <div className="sticky top-24">
               <ProductFilters 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any

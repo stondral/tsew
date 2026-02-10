@@ -46,7 +46,7 @@ export default function Footer() {
             </h4>
             <div className="space-y-3">
               <a
-                href={`mailto:customercare@${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost'}`}
+                href={`mailto:customercare@stondemporiu.tech`}
                 className="flex items-center gap-3 text-gray-700 hover:text-orange-500 transition-colors group"
               >
                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center group-hover:bg-orange-500 transition-colors">
@@ -55,7 +55,7 @@ export default function Footer() {
                 <div>
                   <p className="text-sm font-medium">Email Us</p>
                   <p className="text-xs text-gray-500">
-                    customercare@{process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost'}
+                    customercare@stondemporium.tech
                   </p>
                 </div>
               </a>
@@ -65,7 +65,7 @@ export default function Footer() {
                 </div>
                 <div>
                   <p className="text-sm font-medium">Call Us</p>
-                  <p className="text-xs text-gray-500">+91 98765 43210</p>
+                  <p className="text-xs text-gray-500">+91 9930206424</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 text-gray-700">
@@ -83,35 +83,43 @@ export default function Footer() {
           {/* Quick Links */}
           <div className="space-y-4">
             <h4 className="text-lg font-semibold text-orange-500">
-              Quick Links
+              Explore Stond
             </h4>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Link
                 href="/products"
-                className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
+                className="flex items-center gap-2 text-gray-700 hover:text-orange-500 transition-all text-sm font-medium group"
               >
-                → All Products
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-200 group-hover:bg-orange-500 transition-colors" />
+                The Gallery
               </Link>
               <Link
                 href="/about-us"
-                className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
+                className="flex items-center gap-2 text-gray-700 hover:text-orange-500 transition-all text-sm font-medium group"
               >
-                → About Us
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-200 group-hover:bg-orange-500 transition-colors" />
+                Our Story
               </Link>
-              <div className="block text-gray-400 cursor-not-allowed text-sm">
-                → Contact (Coming Soon)
-              </div>
-              <div className="block text-gray-400 cursor-not-allowed text-sm">
-                → Shipping & Returns (Coming Soon)
-              </div>
-              <div className="block text-gray-400 cursor-not-allowed text-sm">
-                → FAQ (Coming Soon)
-              </div>
+              <Link
+                href="/feedback"
+                className="flex items-center gap-2 text-gray-700 hover:text-orange-500 transition-all text-sm font-medium group"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-200 group-hover:bg-orange-500 transition-colors" />
+                Share Feedback
+              </Link>
+              <Link
+                href="/wishlist"
+                className="flex items-center gap-2 text-gray-700 hover:text-orange-500 transition-all text-sm font-medium group"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-200 group-hover:bg-orange-500 transition-colors" />
+                Collector&apos;s Wishlist
+              </Link>
               <Link
                 href="/auth/register"
-                className="block text-gray-700 hover:text-orange-500 transition-colors text-sm"
+                className="flex items-center gap-2 text-gray-700 hover:text-orange-500 transition-all text-sm font-medium group"
               >
-                → Become a seller
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-200 group-hover:bg-orange-500 transition-colors" />
+                Join as a Partner
               </Link>
             </div>
           </div>

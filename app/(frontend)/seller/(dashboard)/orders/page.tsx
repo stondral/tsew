@@ -1,26 +1,22 @@
 import { getPayload } from "payload";
 import config from "@/payload.config";
-import { headers } from "next/headers";
 import { RecentOrdersTable } from "@/components/seller/RecentOrdersTable";
 import { redirect } from "next/navigation";
+import { getServerSideUser } from "@/lib/auth";
+import { getSellersWithPermission } from "@/lib/rbac/permissions";
 
 export const dynamic = 'force-dynamic';
 
 export default async function SellerOrdersPage() {
   const payload = await getPayload({ config });
-  const requestHeaders = await headers();
-
-  const { user } = await payload.auth({
-    headers: requestHeaders,
-  });
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if (!user || ((user as any).role !== "seller" && (user as any).role !== "admin" && (user as any).role !== "sellerEmployee")) {
+  const user = await getServerSideUser() as any;
+  
+  if (!user || (user.role !== "seller" && user.role !== "admin" && user.role !== "sellerEmployee")) {
     redirect("/auth?redirect=/seller/orders");
   }
 
   // Get sellers where user has order.view permission
-  const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
   const allowedSellers = await getSellersWithPermission(payload, user.id, 'order.view');
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

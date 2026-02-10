@@ -3,93 +3,100 @@ import { getPayload } from 'payload';
 import config from '@/payload.config';
 import { broadcastToTicket } from '@/app/api/support/stream/manager';
 
+function resolveSenderType(user: unknown): 'admin' | 'customer' | 'seller' {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const role = (user as any)?.role;
+  if (role === 'admin') return 'admin';
+  if (role === 'seller' || role === 'sellerEmployee') return 'seller';
+  return 'customer';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { ticketId, content, senderType } = body;
+    const { ticketId, content } = body;
 
-    if (!ticketId || !content || !senderType) {
+    if (!ticketId || !content) {
       return NextResponse.json(
-        { error: 'Missing required fields: ticketId, content, senderType' },
+        { error: 'Missing required fields: ticketId, content' },
         { status: 400 }
       );
     }
 
-    console.log(`📨 Message send requested for ticket ${ticketId} by ${senderType}`);
+    const payload = await getPayload({ config });
+    const { user } = await payload.auth({ headers: request.headers });
 
-    // Get auth token from cookie or header
-    const token = request.cookies.get('payload-token')?.value ||
-      request.headers.get('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Decode JWT to get user ID
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      }
+    const senderType = resolveSenderType(user);
 
-      const payload = JSON.parse(
-        Buffer.from(parts[1], 'base64').toString('utf-8')
-      );
+    // Authorize access to ticket
+    const ticket = await payload.findByID({
+      collection: 'support-tickets',
+      id: ticketId,
+      depth: 0,
+      overrideAccess: true,
+    });
 
-      const userId = payload.id;
-      if (!userId) {
-        return NextResponse.json({ error: 'Invalid token payload' }, { status: 401 });
-      }
+    if (!ticket) {
+      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
+    }
 
-      // Save message to database
-      const payloadInstance = await getPayload({ config });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customerId = typeof (ticket as any).customer === 'object' ? (ticket as any).customer?.id : (ticket as any).customer;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isAdmin = (user as any).role === 'admin';
 
-      console.log(`💾 Saving message to database for ticket ${ticketId}`);
+    if (!isAdmin && customerId !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
-      const message = await payloadInstance.create({
-        collection: 'support-messages',
-        data: {
-          ticket: ticketId,
-          sender: userId,
-          senderType,
-          content,
-          deliveryStatus: 'sent',
-        },
-      });
+    console.log(`📨 Message send requested for ticket ${ticketId} by ${senderType}`);
 
-      console.log(`✅ Message saved with ID: ${message.id}`);
-
-      // Broadcast to all clients connected to this ticket
-      const broadcastData = {
-        id: message.id,
-        ticketId,
-        sender: userId,
+    console.log(`💾 Saving message to database for ticket ${ticketId}`);
+    const message = await payload.create({
+      collection: 'support-messages',
+      data: {
+        ticket: ticketId,
+        sender: user.id,
         senderType,
         content,
         deliveryStatus: 'sent',
-        createdAt: message.createdAt || new Date().toISOString(),
-        _status: 'received',
-      };
+      },
+      overrideAccess: true,
+    });
 
-      broadcastToTicket(ticketId, broadcastData);
+    console.log(`✅ Message saved with ID: ${message.id}`);
 
-      // Also broadcast notification to admin stream (if admin supports it)
-      broadcastToTicket('admin-notifications', {
-        type: 'new_message',
-        ticketId,
-        senderType,
-        content: content.substring(0, 50),
-        timestamp: new Date().toISOString(),
-      });
+    // Broadcast to all clients connected to this ticket
+    const broadcastData = {
+      id: message.id,
+      ticketId,
+      sender: user.id,
+      senderType,
+      content,
+      deliveryStatus: 'sent',
+      createdAt: message.createdAt || new Date().toISOString(),
+      _status: 'received',
+    };
 
-      return NextResponse.json({
-        success: true,
-        message: broadcastData,
-      });
-    } catch (err) {
-      console.error('❌ JWT decode error:', err);
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    broadcastToTicket(ticketId, broadcastData);
+
+    // Also broadcast notification to admin stream
+    broadcastToTicket('admin-notifications', {
+      type: 'new_message',
+      ticketId,
+      senderType,
+      content: content.substring(0, 50),
+      timestamp: new Date().toISOString(),
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: broadcastData,
+    });
   } catch (error) {
     console.error('❌ Message send error:', error);
     return NextResponse.json(

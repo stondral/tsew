@@ -59,7 +59,7 @@ export default function ReviewForm({ productId, onSuccess, initialData, onCancel
         newMedia.push({ id: data.media.id, url: data.media.url });
       }
       setMedia(newMedia);
-    } catch (err) {
+    } catch {
       setError("Failed to upload images. Please try again.");
     } finally {
       setUploading(false);
@@ -96,7 +96,7 @@ export default function ReviewForm({ productId, onSuccess, initialData, onCancel
       } else {
         setError(res.error || `Failed to ${isEditing ? 'update' : 'submit'} review.`);
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);

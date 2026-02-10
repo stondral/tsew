@@ -1,6 +1,4 @@
-import { getPayload } from "payload";
-import config from "@/payload.config";
-import { headers } from "next/headers";
+import { getServerSideUser } from "@/lib/auth";
 import { Sidebar } from "@/components/seller/Sidebar";
 import { TopNav } from "@/components/seller/TopNav";
 import Footer from "@/components/footer";
@@ -14,12 +12,7 @@ export default async function SellerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const payload = await getPayload({ config });
-  const requestHeaders = await headers();
-
-  const { user } = await payload.auth({
-    headers: requestHeaders,
-  });
+  const user = await getServerSideUser();
 
   // Authentication check
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

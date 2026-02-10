@@ -1,7 +1,8 @@
 import { getPayload } from "payload";
 import config from "@/payload.config";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getServerSideUser } from "@/lib/auth";
+import { getSellersWithPermission } from "@/lib/rbac/permissions";
 import { AnalyticsDashboard } from "@/components/seller/AnalyticsDashboard";
 import { Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,21 +11,17 @@ import Link from "next/link";
 export const dynamic = 'force-dynamic';
 
 export default async function AnalyticsPage() {
-  const payload = await getPayload({ config });
-  const requestHeaders = await headers();
-
-  const { user } = await payload.auth({
-    headers: requestHeaders,
-  });
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userRole = (user as any).role;
+  const user = await getServerSideUser() as any;
+  const userRole = user?.role;
+
   if (!user || (userRole !== "seller" && userRole !== "admin" && userRole !== "sellerEmployee")) {
     redirect("/auth?redirect=/seller/analytics");
   }
 
+  const payload = await getPayload({ config });
+
   // Get sellers where user has analytics.view permission
-  const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
   const allowedSellers = await getSellersWithPermission(payload, user.id, 'analytics.view');
 
   if (allowedSellers.length === 0 && userRole !== 'admin') {

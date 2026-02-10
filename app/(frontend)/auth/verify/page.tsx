@@ -53,6 +53,7 @@ function VerifyEmailContent() {
         const response = await fetch(`/api/users/verify/${token}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           signal: controller.signal,
         });
 
@@ -62,21 +63,18 @@ function VerifyEmailContent() {
           setStatus("success");
           setMessage("Your email has been verified successfully!");
 
-          // ✅ Auto-login if token is provided
-          if (data.autoLogin && data.token) {
+          // Auto-login on this device if the server set an auth cookie
+          if (data.loggedIn) {
             setIsAutoLoggingIn(true);
             setMessage("Logging you in automatically...");
-            
-            // Store the token
-            localStorage.setItem("payload-token", data.token);
-            
-            // Refresh auth context to load user data
+
+            // Refresh auth context to load user data (cookie-based)
             await refresh();
-            
+
             // Redirect to home page after a brief delay
             setTimeout(() => {
               router.push("/");
-            }, 1500);
+            }, 1200);
           }
         } else {
           const data = await response.json();

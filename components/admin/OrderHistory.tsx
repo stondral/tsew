@@ -36,14 +36,10 @@ export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps)
       try {
         setIsLoading(true);
         setError(null);
-        const token = localStorage.getItem("payload-token");
-
         const response = await fetch(
           `/api/admin/customer-orders?customerId=${customerId}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: "include",
           }
         );
 

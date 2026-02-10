@@ -1,0 +1,90 @@
+AUTH TEST CASES (manual)
+
+Pre-reqs
+- App running
+- SMTP configured so verification emails are actually delivered
+- Use 2 devices/browsers OR 2 separate browser profiles/incognito sessions
+
+Legend
+- Device A: the device where user signs up and waits
+- Device B: the device where user clicks the verification link
+
+1) Signup -> Verify screen -> live listener active
+Steps
+1. Device A: go to /auth
+2. Click Register tab
+3. Register with a fresh email
+Expected
+- UI shows "Please Verify Your Email"
+- UI indicates "Waiting for email verification..." and that live verification is active
+- A verification email is received
+
+2) Cross-device verification -> Device A auto-sign-in
+Steps
+1. Device A: remain on verify screen
+2. Device B: open verification email and click link
+Expected (Device B)
+- /auth/verify shows success and quickly transitions to "Logging You In..."
+- User ends up logged in (cookie-based) and redirected to /
+Expected (Device A)
+- Within ~2–5 seconds, UI transitions to "Email verified — signing you in..."
+- Device A automatically signs in and redirects to the redirect target (or /)
+
+3) Verify link used twice
+Steps
+1. Use a valid verification token once (should succeed)
+2. Re-open same link
+Expected
+- Second attempt shows "Invalid or expired token" error
+
+4) Login with unverified email
+Steps
+1. Create account but do NOT click verification link
+2. On Device A, go to /auth and attempt Login with the new account
+Expected
+- UI switches to verify screen
+- Verification email is resent
+- Live verification starts (auto-sign-in after verification)
+
+5) Resend verification rate limit
+Steps
+1. Trigger resend multiple times quickly (>= 6 times within 60 seconds)
+Expected
+- API returns 429 after the limit
+- UI should handle gracefully (no sensitive info leaked)
+
+6) Security regression: no auth token in localStorage
+Steps
+1. Sign in
+2. Open DevTools console
+3. Check localStorage for payload-token
+Expected
+- No payload-token stored in localStorage
+
+7) SSE stream security (support)
+Steps
+1. Open /api/support/stream?ticketId=someTicketId in a private window with no cookies
+Expected
+- 401 Unauthorized
+
+8) SSE stream authorization (support)
+Steps
+1. Sign in as User A
+2. Attempt to subscribe to a support ticket belonging to User B
+Expected
+- 403 Forbidden
+
+9) Admin notifications stream requires admin
+Steps
+1. Sign in as non-admin
+2. Attempt to open /api/support/stream?ticketId=admin-notifications
+Expected
+- 403 Forbidden
+
+10) Logout clears session
+Steps
+1. Sign in
+2. Logout
+3. Visit a protected route (e.g. /administrator)
+Expected
+- Redirect to /auth

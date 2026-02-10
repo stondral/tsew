@@ -26,10 +26,11 @@ export default async function IncomingOrdersPage() {
   // Fetch seller's warehouses
   const warehousesRes = await payload.find({
     collection: "warehouses" as never,
-    where: {
-      user: { equals: user.id },
+    where: (user as User).role === 'admin' ? {} : {
+      seller: { in: allowedSellers },
     },
     limit: 100,
+    overrideAccess: true,
   })
 
   return <IncomingOrdersClient orders={orders} warehouses={warehousesRes.docs} />

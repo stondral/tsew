@@ -1,6 +1,6 @@
 {
   "name": "stondemporium",
-  "version": "27.6.11",
+  "version": "27.6.12",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

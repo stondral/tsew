@@ -136,14 +136,12 @@ export function OrderMasterCard({ order, onUpdate, isReadOnly }: OrderMasterCard
     try {
       setIsLoading(true);
       setMessage(null);
-      const token = localStorage.getItem("payload-token");
-      
       const response = await fetch('/api/admin/order-master-update', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include',
         body: JSON.stringify({
           orderId: order.id,
           ...formData

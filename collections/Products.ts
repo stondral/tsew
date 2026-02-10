@@ -57,9 +57,9 @@ export const Products: CollectionConfig = {
       if (!req.user) return false
       if ((req.user as any).role === 'admin') return true
       
-      // Need a way to check if they have permission for AT LEAST ONE seller
-      // but 'create' access doesn't know which seller they are creating for yet (that's in data)
-      // So we return true if they are a 'seller' or have membership in any org with product.create
+      // In Payload, 'create' access doesn't always have access to the 'data' being submitted.
+      // So we check if the user has permission for AT LEAST ONE seller to allow the UI to show the 'Create' button.
+      // Strict validation for the SPECIFIC seller is handled in the beforeChange hook below.
       const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'product.create')
       return allowedSellers.length > 0
     },
@@ -96,16 +96,33 @@ export const Products: CollectionConfig = {
   hooks: {
     beforeChange: [
       // Auto-assign seller + enforce pending state
-      async ({ req, data, operation }) => {
+      async ({ req, data, originalDoc, operation }) => {
         if (operation === 'create' && req.user) {
-          // Non-admins must always have their products start as pending
+          // 1. Mandatory Security Check: Ensure seller is provided and user has permission for it
+          const sellerId = data.seller;
+          if (!sellerId) {
+            throw new Error("Seller organization is required");
+          }
+
           if ((req.user as any)?.role !== 'admin') {
+            const hasCreatePermission = await hasPermission(req.payload, req.user.id, sellerId, 'product.create');
+            if (!hasCreatePermission) {
+              throw new Error("You do not have permission to create products for this organization");
+            }
+            
+            // Non-admins must always have their products start as pending
             data.status = 'pending'
           }
-          
-          // If seller is not provided, we don't auto-assign to the user ID anymore
-          // because seller relationship points to a 'sellers' collection doc, not a 'users' doc.
-          // The frontend should provide the correct seller ID.
+        }
+
+        if (operation === 'update' && req.user && (req.user as any)?.role !== 'admin') {
+          // 2. Mandatory Security Check: Ensure they aren't trying to change the seller to one they don't own
+          if (data.seller && data.seller !== originalDoc.seller) {
+            const hasCreatePermission = await hasPermission(req.payload, req.user.id, data.seller, 'product.create');
+            if (!hasCreatePermission) {
+              throw new Error("You cannot transfer a product to an organization you do not manage");
+            }
+          }
         }
 
         // Auto-generate slug

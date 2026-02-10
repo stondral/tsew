@@ -4,41 +4,49 @@ export const Warehouses: CollectionConfig = {
   slug: "warehouses",
 
   access: {
-    read: ({ req }) => {
+    read: async ({ req }) => {
       if (!req.user) return false
       if ((req.user as any).role === "admin") return true
 
+      const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'warehouse.view');
+      
       return {
-        user: {
-          equals: req.user.id,
-        },
-      }
+        seller: { in: allowedSellers },
+      } as any
     },
 
-    create: ({ req }) => {
-      return Boolean(req.user) && ((req.user as any).role === "seller" || (req.user as any).role === "admin")
-    },
-
-    update: ({ req }) => {
+    create: async ({ req }) => {
       if (!req.user) return false
       if ((req.user as any).role === "admin") return true
 
-      return {
-        user: {
-          equals: req.user.id,
-        },
-      }
+      const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'warehouse.view'); // Broad check for create permission?
+      return allowedSellers.length > 0
     },
 
-    delete: ({ req }) => {
+    update: async ({ req }) => {
       if (!req.user) return false
       if ((req.user as any).role === "admin") return true
 
+      const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'seller.manage');
+      
       return {
-        user: {
-          equals: req.user.id,
-        },
-      }
+        seller: { in: allowedSellers },
+      } as any
+    },
+
+    delete: async ({ req }) => {
+      if (!req.user) return false
+      if ((req.user as any).role === "admin") return true
+
+      const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+      const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'seller.manage');
+      
+      return {
+        seller: { in: allowedSellers },
+      } as any
     },
   },
 
@@ -49,13 +57,12 @@ export const Warehouses: CollectionConfig = {
 
   fields: [
     {
-      name: "user",
+      name: "seller",
       type: "relationship",
-      relationTo: "users",
+      relationTo: "sellers" as any,
       required: true,
       admin: {
         position: "sidebar",
-        readOnly: true,
       },
     },
 
@@ -122,9 +129,20 @@ export const Warehouses: CollectionConfig = {
 
   hooks: {
     beforeChange: [
-      ({ data, req, operation }) => {
+      async ({ data, req, operation }) => {
         if (operation === "create" && req.user) {
-          data.user = req.user.id
+          // If seller not provided, try to auto-assign if they only have one
+          if (!data.seller) {
+            const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+            const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'warehouse.view');
+            if (allowedSellers.length === 1) {
+              data.seller = allowedSellers[0];
+            }
+          }
+          
+          if (!data.seller && (req.user as any).role !== 'admin') {
+            throw new Error("Seller organization is required");
+          }
         }
         return data
       },

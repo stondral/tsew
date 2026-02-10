@@ -11,16 +11,15 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from 
 import { motion, AnimatePresence } from "framer-motion";
 import AuthDropdown from "@/components/auth/AuthDropdown";
 import Cart from "@/components/cart/Cart";
-import { useWishlist } from "@/components/products/WishlistContext";
 
 import logoston from "./logoston.png";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/products", label: "Discover" },
+  { href: "/products", label: "Discover", badge: "NEW" },
   { href: "/wishlist", label: "Wishlist" },
   { href: "/about-us", label: "About Us" },
-  { href: "/feedback", label: "Feedback" },
+  { href: "/feedback", label: "Feedback", badge: "HOT" },
 ];
 
 export default function Navbar() {
@@ -30,7 +29,6 @@ export default function Navbar() {
    const [isSearchVisible, setIsSearchVisible] = useState(false);
    const [isMenuOpen, setIsMenuOpen] = useState(false);
    const isFeedbackPage = pathname === "/feedback";
-   const { wishlistIds: _ } = useWishlist();
 
   useEffect(() => {
     if (!isFeedbackPage) return;
@@ -53,41 +51,72 @@ export default function Navbar() {
         {/* mobile menu */}
         <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="mr-2 md:hidden z-10">
+            <Button variant="ghost" size="icon" className="mr-2 md:hidden z-10 transition-transform active:scale-90">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left">
-            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-            <SheetDescription className="sr-only">Access site pages and search.</SheetDescription>
-            <nav className="flex flex-col gap-4 mt-8">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const q = formData.get("q");
-                  if (q)
-                    router.push(
-                      `/products?q=${encodeURIComponent(q.toString())}`,
-                    );
-                }}
-                className="relative w-full mb-4"
-              ></form>
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`text-lg font-medium transition-colors ${
-                    isActive(link.href, pathname)
-                      ? "text-foreground font-semibold"
-                      : "text-foreground/80 hover:text-accent"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+          <SheetContent side="left" className="w-[300px] sm:w-[400px] border-r-0 bg-white/80 backdrop-blur-2xl px-0">
+            <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }} />
+            
+            <SheetTitle className="px-6 text-2xl font-black tracking-tighter text-slate-900 mt-6">
+              STOND <span className="text-orange-500 italic">MENU</span>
+            </SheetTitle>
+            <SheetDescription className="px-6 text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-1 mb-8">
+              Premium Shopping Experience
+            </SheetDescription>
+            
+            <nav className="flex flex-col px-4">
+              <AnimatePresence>
+                {isMenuOpen && (
+                  <div className="space-y-1">
+                    {NAV_LINKS.map((link, idx) => (
+                      <motion.div
+                        key={link.href}
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: idx * 0.1, type: "spring", stiffness: 100 }}
+                      >
+                        <Link
+                          href={link.href}
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`group flex items-center justify-between px-6 py-4 rounded-2xl transition-all ${
+                            isActive(link.href, pathname)
+                              ? "bg-orange-50 text-orange-600 shadow-sm"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          }`}
+                        >
+                          <span className={`text-lg font-black tracking-tight ${isActive(link.href, pathname) ? "" : ""}`}>
+                            {link.label}
+                          </span>
+                          
+                          {link.badge && (
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ring-1 ${
+                              link.badge === 'NEW' 
+                                ? "bg-orange-500 text-white ring-orange-500" 
+                                : "bg-white text-orange-500 ring-orange-200"
+                            }`}>
+                              {link.badge}
+                            </span>
+                          )}
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </AnimatePresence>
             </nav>
+
+            <div className="absolute bottom-10 left-0 w-full px-6">
+              <div className="p-6 rounded-[2rem] bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-xl shadow-orange-200">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Partner with us</p>
+                <h4 className="text-xl font-black mb-4 tracking-tight">Become a Stond Seller</h4>
+                <Link href="/auth/register" onClick={() => setIsMenuOpen(false)}>
+                  <Button className="w-full bg-white text-orange-600 hover:bg-white/90 rounded-xl font-black text-xs uppercase tracking-widest border-none h-12">
+                    Join Today
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
 

@@ -43,20 +43,7 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
       try {
         console.log("📡 SupportPanelClient: Initializing SSE stream for admin notifications...");
         
-        // Get token for authentication
-        const token = typeof window !== 'undefined' 
-          ? localStorage.getItem('payload-token')
-          : null;
-        
-        if (!token) {
-          console.warn("⚠️ SupportPanelClient: No auth token found - SSE will not connect");
-          setIsConnected(false);
-          return;
-        }
-
-        console.log("🔑 SupportPanelClient: Token found, connecting to SSE stream");
-        
-        // Connect to admin notifications stream
+        // Connect to admin notifications stream (cookie-auth)
         const url = `/api/support/stream?ticketId=admin-notifications`;
         const eventSource = new EventSource(url);
         eventSourceRef.current = eventSource;

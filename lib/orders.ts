@@ -101,7 +101,7 @@ export async function updateOrderShippingAddress(
   const { hasPermission } = await import('@/lib/rbac/permissions');
   const orderSellerId = typeof order.seller === "object" ? order.seller.id : order.seller;
 
-  const canEdit = await hasPermission(payload, sellerId, String(orderSellerId), 'order.view'); // Minimum view permission to edit address? Or should it be update?
+  const canEdit = await hasPermission(payload, sellerId, String(orderSellerId), 'order.update_status');
 
   if (!canEdit) {
     throw new Error(`Unauthorized: Ownership mismatch.`);

@@ -148,17 +148,13 @@ export function useChat(ticketId: string, userId: string, senderType: 'admin' | 
       setMessages((prev) => [...prev, optimisticMessage]);
       console.log("✅ useChat: Message added optimistically");
 
-      // Send message via HTTP POST
-      const token = typeof window !== 'undefined' 
-        ? localStorage.getItem('payload-token')
-        : null;
-
+      // Send message via HTTP POST (cookie auth)
       fetch('/api/support/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
+        credentials: 'include',
         body: JSON.stringify({
           ticketId,
           content,

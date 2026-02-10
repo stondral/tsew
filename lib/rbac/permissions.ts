@@ -1,4 +1,5 @@
 import { Payload } from 'payload'
+import { cache } from 'react'
 
 // ============================================================================
 // GRANULAR PERMISSIONS - Always check permissions, not roles!
@@ -288,7 +289,7 @@ export const can = hasPermission
 /**
  * Gets all seller IDs where the user has a specific permission.
  */
-export async function getSellersWithPermission(
+export const getSellersWithPermission = cache(async function(
   payload: Payload,
   userId: string,
   permission: Permission
@@ -342,7 +343,7 @@ export async function getSellersWithPermission(
   }
 
   return Array.from(allowedIds)
-}
+})
 
 /**
  * Get permissions for a specific role (for UI display)

@@ -5,6 +5,12 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { hasPermission } from "@/lib/rbac/permissions";
+
+interface AuthenticatedUser {
+  id: string;
+  role?: string;
+}
 
 export async function acceptOrderAction(
   orderId: string, 
@@ -20,9 +26,9 @@ export async function acceptOrderAction(
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  interface UserWithRole { role?: string; id: string }
-  const userWithRole = user as unknown as UserWithRole;
-  if (!userWithRole || (userWithRole.role !== 'seller' && userWithRole.role !== 'admin')) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const authUser = user as any as AuthenticatedUser;
+  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin' && authUser.role !== 'sellerEmployee')) {
     return { ok: false, error: "Unauthorized" };
   }
 
@@ -40,6 +46,18 @@ export async function acceptOrderAction(
          depth: 1,
          overrideAccess: true,
        });
+
+       if (!order) {
+         throw new Error("Order not found");
+       }
+
+       // Explicit permission check
+       const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
+       const canAccept = await hasPermission(payload, authUser.id, orderSellerId, 'order.fulfill');
+       
+       if (!canAccept && authUser.role !== 'admin') {
+         throw new Error("You do not have permission to accept orders for this organization");
+       }
 
        const warehouse = await payload.findByID({
          collection: "warehouses",
@@ -201,7 +219,7 @@ export async function acceptOrderAction(
     }
 
     // 3. Complete local order acceptance
-    await acceptOrder(orderId, userWithRole.id, {
+    await acceptOrder(orderId, authUser.id, {
       ...deliveryData,
       trackingId,
       carrierResponse
@@ -233,7 +251,8 @@ export async function updateOrderAddressAction(
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  if (!user || ((user as { role?: string }).role !== 'seller' && (user as { role?: string }).role !== 'admin')) {
+  const authUser = user as AuthenticatedUser;
+  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin')) {
     return { ok: false, error: "Unauthorized" };
   }
 
@@ -246,6 +265,14 @@ export async function updateOrderAddressAction(
     });
 
     if (!order) throw new Error("Order not found");
+
+    // Explicit permission check
+    const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
+    const canEdit = await hasPermission(payload, authUser.id, orderSellerId, 'order.update_status');
+    
+    if (!canEdit && authUser.role !== 'admin') {
+      throw new Error("You do not have permission to modify this order's address");
+    }
 
     const addressId = typeof order.shippingAddress === 'object' ? order.shippingAddress.id : order.shippingAddress;
 
@@ -285,7 +312,8 @@ export async function getDelhiveryStatsAction(
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  if (!user || ((user as { role?: string }).role !== 'seller' && (user as { role?: string }).role !== 'admin')) {
+  const authUser = user as AuthenticatedUser;
+  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin')) {
     return { ok: false, error: "Unauthorized" };
   }
 
@@ -297,6 +325,14 @@ export async function getDelhiveryStatsAction(
     });
 
     if (!order) throw new Error("Order not found");
+
+    // Explicit permission check
+    const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
+    const canView = await hasPermission(payload, authUser.id, orderSellerId, 'order.view');
+    
+    if (!canView && authUser.role !== 'admin') {
+      throw new Error("You do not have permission to view this order's delivery stats");
+    }
 
     const warehouse = await payload.findByID({
       collection: "warehouses",
@@ -424,7 +460,9 @@ export async function searchOrderAction(orderNumber: string) {
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  if (!user || ((user as { role?: string }).role !== 'seller' && (user as { role?: string }).role !== 'admin' && (user as { role?: string }).role !== 'sellerEmployee')) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const authUser = user as any;
+  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin' && authUser.role !== 'sellerEmployee')) {
     return { ok: false, error: "Unauthorized" };
   }
 
@@ -444,13 +482,11 @@ export async function searchOrderAction(orderNumber: string) {
     }
 
     const order = orders.docs[0];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userWithRole = user as any;
 
     // Ownership check for sellers/employees
-    if (userWithRole.role !== 'admin') {
+    if (authUser.role !== 'admin') {
       const { getSellersWithPermission } = await import("@/lib/rbac/permissions");
-      const allowedSellers = await getSellersWithPermission(payload, userWithRole.id, 'order.view');
+      const allowedSellers = await getSellersWithPermission(payload, authUser.id, 'order.view');
       
       const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
       

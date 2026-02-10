@@ -31,7 +31,7 @@ export default async function WarehousesPage() {
   const warehousesRes = await payload.find({
     collection: "warehouses" as never,
     where: (user as User).role === 'admin' ? {} : {
-      user: { in: allowedSellers },
+      seller: { in: allowedSellers },
     },
     limit: 100,
     overrideAccess: true,

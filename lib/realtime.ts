@@ -32,16 +32,7 @@ export class SSEAdapter implements RealtimeAdapter {
       return;
     }
 
-    // ✅ Get token from localStorage for authentication
-    const token = typeof window !== 'undefined' 
-      ? localStorage.getItem('payload-token')
-      : null;
-
-    console.log(`🔗 SSEAdapter.connect() - Ticket: ${this.currentTicketId}, Token exists: ${!!token}`);
-    
-    if (!token) {
-      console.warn('⚠️ SSEAdapter.connect() - NO TOKEN FOUND - connection might lack auth context');
-    }
+    // Cookie-based auth; no localStorage token needed.
 
     const url = `/api/support/stream?ticketId=${this.currentTicketId}`;
     this.eventSource = new EventSource(url);
@@ -100,8 +91,8 @@ export class SSEAdapter implements RealtimeAdapter {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('payload-token')}`
         },
+        credentials: 'include',
         body: JSON.stringify({
           ticketId: data.ticketId || data.roomId || this.currentTicketId,
           content: data.content,

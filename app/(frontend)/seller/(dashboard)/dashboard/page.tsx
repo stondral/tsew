@@ -1,5 +1,3 @@
-"use client";
-
 import { StatsCards } from "@/components/seller/StatsCards";
 import { RevenueChart } from "@/components/seller/RevenueChart";
 import { RecentOrdersTable } from "@/components/seller/RecentOrdersTable";
@@ -7,63 +5,173 @@ import { BestSellingProducts } from "@/components/seller/BestSellingProducts";
 import { Button } from "@/components/ui/button";
 import { FileDown, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { getPayload } from "payload";
+import config from "@/payload.config";
+import { getServerSideUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getSellersWithPermission } from "@/lib/rbac/permissions";
 
-interface StatItem {
-  title: string;
-  value: string;
-  change: string;
-  isPositive: boolean;
-  icon: string;
-  color: string;
+interface User {
+  id: string;
+  role?: string;
+  username?: string;
+  email?: string;
 }
 
-interface DashboardData {
-  stats: StatItem[];
-  chartData: unknown[];
-  orders: unknown[];
-  topProducts: unknown[];
-  user: { username?: string; email?: string };
+interface Product {
+  id: string;
+  status?: string;
+  createdAt: string;
 }
 
-// Client-side component for handling dynamic data fetching or UI state
-export default function SellerDashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface OrderItem {
+  productId: string;
+  seller?: string | { id: string };
+  priceAtPurchase: number;
+  quantity: number;
+}
 
-  useEffect(() => {
-    async function fetchDashboardData() {
-        try {
-            const res = await fetch('/api/seller/dashboard');
-            if (res.ok) {
-                const result = await res.json();
-                setData(result);
-            }
-        } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-    fetchDashboardData();
-  }, []);
+interface Order {
+  id: string;
+  orderDate: string;
+  items: OrderItem[];
+}
 
-  if (loading) {
+export default async function SellerDashboardPage() {
+  const user = await getServerSideUser() as User | null;
+
+  if (!user || (user.role !== "seller" && user.role !== "admin" && user.role !== "sellerEmployee")) {
+    redirect("/auth?redirect=/seller/dashboard");
+  }
+
+  const payload = await getPayload({ config });
+
+  // Get sellers where user has product.view permission
+  const allowedSellers = await getSellersWithPermission(payload, user.id, 'product.view');
+
+  if (allowedSellers.length === 0 && user.role !== 'admin') {
     return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-            <div className="h-12 w-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] animate-pulse">Syncing your workspace...</p>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+            <h2 className="text-2xl font-black">No organizations found</h2>
+            <p className="text-slate-500 max-w-md">You don&apos;t have access to any seller organizations. Please contact support if this is an error.</p>
         </div>
     );
   }
 
-  const { stats, chartData, orders, topProducts, user } = data || {
-    stats: [],
-    chartData: [],
-    orders: [],
-    topProducts: [],
-    user: { username: "Seller" }
+  // Optimize: Fetch essential dashboard data in parallel
+  const [productsRes, recentOrdersRes] = await Promise.all([
+    payload.find({
+        collection: "products" as never,
+        where: user.role === 'admin' ? {} : {
+          seller: { in: allowedSellers },
+        },
+        limit: 100,
+        overrideAccess: true,
+      }),
+    payload.find({
+        collection: "orders" as never,
+        where: {
+          and: [
+            // Simplified for now, in a real scenario we'd filter by seller in the query if possible
+            { orderDate: { greater_than_equal: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() } }
+          ]
+        },
+        limit: 100,
+        sort: "-orderDate",
+        depth: 2,
+        overrideAccess: true,
+      })
+  ]);
+
+  const sellerProducts = productsRes.docs as Product[];
+  const sellerProductIds = sellerProducts.map((p) => p.id);
+  const liveProductsCount = sellerProducts.filter((p) => p.status === 'live').length;
+
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 7);
+  
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const chartDataMap: Record<string, { name: string, total: number, date: Date }> = {};
+  
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(today.getDate() - i);
+    const dayName = days[date.getDay()];
+    const dateStr = date.toISOString().split('T')[0];
+    chartDataMap[dateStr] = { name: dayName, total: 0, date };
+  }
+
+  let currentWeekRevenue = 0;
+  let previousWeekRevenue = 0;
+  let currentWeekOrders = 0;
+  let previousWeekOrders = 0;
+  const productSalesMap: Record<string, number> = {};
+
+  const allOrders = recentOrdersRes.docs as Order[];
+  
+  // High-performance filter and reduction
+  const sellerOrders = allOrders.filter(order => {
+    const isRelevant = order.items.some(item => {
+        const itemSellerId = typeof item.seller === 'string' ? item.seller : item.seller?.id;
+        return user.role === 'admin' || allowedSellers.includes(itemSellerId as string) || sellerProductIds.includes(item.productId);
+    });
+    return isRelevant;
+  }).map(order => {
+    const orderDate = new Date(order.orderDate);
+    const dateStr = orderDate.toISOString().split('T')[0];
+    const isCurrentWeek = orderDate >= sevenDaysAgo;
+    
+    if (isCurrentWeek) currentWeekOrders++;
+    else previousWeekOrders++;
+
+    let orderRevenue = 0;
+    order.items.forEach((item) => {
+        const itemSellerId = typeof item.seller === 'string' ? item.seller : item.seller?.id;
+        if (user.role === 'admin' || allowedSellers.includes(itemSellerId as string) || sellerProductIds.includes(item.productId)) {
+            const itemRevenue = (item.priceAtPurchase || 0) * (item.quantity || 0);
+            orderRevenue += itemRevenue;
+            
+            if (isCurrentWeek) {
+                currentWeekRevenue += itemRevenue;
+                if (chartDataMap[dateStr]) chartDataMap[dateStr].total += itemRevenue;
+            } else {
+                previousWeekRevenue += itemRevenue;
+            }
+            productSalesMap[item.productId] = (productSalesMap[item.productId] || 0) + (item.quantity || 0);
+        }
+    });
+    return { ...order, totalAmount: orderRevenue };
+  });
+
+  const chartData = Object.values(chartDataMap).sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const calculateGrowth = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? "100%" : "0%";
+    const growth = ((current - previous) / previous) * 100;
+    return `${growth > 0 ? '+' : ''}${growth.toFixed(1)}%`;
   };
+
+  const revenueGrowth = calculateGrowth(currentWeekRevenue, previousWeekRevenue);
+  const ordersGrowth = calculateGrowth(currentWeekOrders, previousWeekOrders);
+  
+  const currentAOV = currentWeekOrders > 0 ? currentWeekRevenue / currentWeekOrders : 0;
+  const previousAOV = previousWeekOrders > 0 ? previousWeekRevenue / previousWeekOrders : 0;
+  const aovGrowth = calculateGrowth(currentAOV, previousAOV);
+
+  const newProductsCount = sellerProducts.filter((p) => new Date(p.createdAt) >= sevenDaysAgo).length;
+
+  const topProducts = sellerProducts
+    .map((p) => ({ ...p, salesCount: productSalesMap[p.id] || 0 }))
+    .sort((a, b) => b.salesCount - a.salesCount)
+    .slice(0, 5);
+
+  const stats = [
+    { title: "Total Revenue", value: `₹${currentWeekRevenue.toLocaleString()}`, change: revenueGrowth, isPositive: currentWeekRevenue >= previousWeekRevenue, icon: "shopping-bag", color: "amber" },
+    { title: "Active Orders", value: currentWeekOrders.toString(), change: ordersGrowth, isPositive: currentWeekOrders >= previousWeekOrders, icon: "activity", color: "indigo" },
+    { title: "Live Products", value: liveProductsCount.toString(), change: `+${newProductsCount} new`, isPositive: true, icon: "layout-grid", color: "emerald" },
+    { title: "Avg. Order Value", value: `₹${currentAOV.toFixed(0)}`, change: aovGrowth, isPositive: currentAOV >= previousAOV, icon: "plus", color: "slate" },
+  ];
 
   return (
     <div className="space-y-12 pb-20">
@@ -105,7 +213,7 @@ export default function SellerDashboardPage() {
       </div>
 
       <div className="w-full pt-4">
-          <RecentOrdersTable orders={orders.slice(0, 15)} />
+          <RecentOrdersTable orders={sellerOrders.slice(0, 15)} />
       </div>
     </div>
   );

@@ -4,8 +4,10 @@ import { getPayload } from "payload"
 import config from "@/payload.config"
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
+// removed unused imports
 
 interface WarehouseData {
+  seller?: string;
   label: string;
   firstName: string;
   lastName: string;
@@ -31,10 +33,7 @@ export async function createWarehouseAction(data: WarehouseData) {
 
     const warehouse = await payload.create({
       collection: "warehouses",
-      data: {
-        ...data,
-        user: user.id,
-      },
+      data: data,
     });
 
     revalidatePath("/seller/warehouses")

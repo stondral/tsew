@@ -62,11 +62,10 @@ export function ContextPanel({ customer, orderHistory = [], isFetchingHistory, i
     const fetchOrders = async () => {
       if (!customer?.id) return;
       try {
-        const token = localStorage.getItem("payload-token");
         const response = await fetch(
           `/api/admin/customer-orders?customerId=${customer.id}`,
           {
-            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include",
           }
         );
         if (response.ok) {

@@ -13,21 +13,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`📦 Fetching orders for customer ${customerId}`);
+    const payload = await getPayload({ config });
+    const { user } = await payload.auth({ headers: request.headers });
 
-    // Get auth token
-    const token = request.cookies.get('payload-token')?.value ||
-      request.headers.get('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!user || (user as any).role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get Payload instance
-    const payloadInstance = await getPayload({ config });
+    console.log(`📦 Fetching orders for customer ${customerId}`);
 
     // Fetch orders for this customer
-    const { docs: orders } = await payloadInstance.find({
+    const { docs: orders } = await payload.find({
       collection: 'orders',
       where: {
         user: {
@@ -37,6 +34,7 @@ export async function GET(request: NextRequest) {
       sort: '-createdAt',
       limit: 20,
       depth: 1,
+      overrideAccess: true,
     });
 
     console.log(`✅ Found ${orders?.length || 0} orders for customer ${customerId}`);

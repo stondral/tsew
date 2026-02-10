@@ -89,19 +89,21 @@ export default function MyOrdersPage() {
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {orders.map((order) => (
               <Link
                 key={order.id}
                 href={`/orders/${order.id}`}
                 className="block group"
               >
-                <div className="bg-white p-4 md:p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-orange-200 transition-all duration-300">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 md:gap-6">
-                    {/* Items Preview */}
-                    <div className="flex -space-x-3">
+                <div className="bg-white p-3 md:p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-orange-200 transition-all duration-300 overflow-hidden">
+                  <div className="flex flex-col gap-3 md:gap-4">
+                    {/* Top Row: Image + Order Info */}
+                    <div className="flex items-start gap-3 md:gap-4 min-w-0">
+                      {/* Items Preview */}
+                      <div className="flex-shrink-0">
                          {order.items?.[0]?.productImage ? (
-                           <div className="w-14 h-14 rounded-xl border-2 border-white shadow-sm overflow-hidden flex-shrink-0 relative">
+                           <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl border-2 border-white shadow-sm overflow-hidden relative">
                              <Image 
                                src={resolveMediaUrl(order.items[0].productImage)} 
                                alt={order.items[0].productName} 
@@ -110,47 +112,57 @@ export default function MyOrdersPage() {
                              />
                            </div>
                          ) : (
-                           <div className="w-14 h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center border-2 border-white shadow-sm">
-                             <Package className="w-6 h-6 text-orange-600" />
+                           <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl flex items-center justify-center border-2 border-white shadow-sm">
+                             <Package className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
                            </div>
                          )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-3 mb-2">
-                        <span className="font-mono text-sm font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
-                          {order.orderNumber}
-                        </span>
-                        <div className="flex items-center text-sm text-gray-400 gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(order.orderDate).toLocaleDateString("en-IN", {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                          })}
-                        </div>
                       </div>
-                      <h3 className="font-bold text-base md:text-lg text-gray-900 truncate">
-                        {order.items.length === 1
-                           ? order.items[0].productName
-                           : `${order.items[0].productName} + ${order.items.length - 1} more items`
-                        }
-                      </h3>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                          <span className="font-mono text-xs md:text-sm font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded">
+                            {order.orderNumber}
+                          </span>
+                          <div className="flex items-center text-xs md:text-sm text-gray-400 gap-1">
+                            <Calendar className="w-3 h-3 md:w-4 md:h-4" />
+                            <span className="hidden sm:inline">
+                              {new Date(order.orderDate).toLocaleDateString("en-IN", {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                              })}
+                            </span>
+                            <span className="sm:hidden">
+                              {new Date(order.orderDate).toLocaleDateString("en-IN", {
+                                  day: 'numeric',
+                                  month: 'short'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        <h3 className="font-bold text-sm md:text-lg text-gray-900 line-clamp-1">
+                          {order.items.length === 1
+                             ? order.items[0].productName
+                             : `${order.items[0].productName} + ${order.items.length - 1} more`
+                          }
+                        </h3>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 sm:text-right">
-                      <div className="flex flex-col items-start sm:items-end gap-1">
-                          <p className="text-lg md:text-xl font-black text-gray-900">₹{order.total.toLocaleString("en-IN")}</p>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className={cn("rounded-md text-[10px] md:text-xs", order.paymentStatus === 'paid' ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200")}>
+                    {/* Bottom Row: Price + Status */}
+                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-50">
+                      <div className="flex flex-col gap-1">
+                          <p className="text-base md:text-xl font-black text-gray-900">₹{order.total.toLocaleString("en-IN")}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge variant="outline" className={cn("rounded-md text-[10px] md:text-xs px-1.5 py-0", order.paymentStatus === 'paid' ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-700 border-gray-200")}>
                                 {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
                             </Badge>
-                            <Badge variant="outline" className="rounded-md border-orange-200 text-orange-700 bg-orange-50 font-semibold uppercase tracking-wider text-[9px] md:text-[10px]">
+                            <Badge variant="outline" className="rounded-md border-orange-200 text-orange-700 bg-orange-50 font-semibold uppercase tracking-wider text-[9px] md:text-[10px] px-1.5 py-0">
                                 {order.status}
                             </Badge>
                           </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
+                      <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                     </div>
                   </div>
                 </div>

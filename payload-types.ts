@@ -82,6 +82,9 @@ export interface Config {
     carts: any;
     'support-tickets': any;
     'support-messages': any;
+    'wishlist': any;
+    'reviews': any;
+    'verification-sessions': any;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;

@@ -18,7 +18,7 @@ export async function middleware(req: NextRequest) {
 
   // 2. Strict Admin & Support Security Block (MUST be before general API skip)
   if (path.startsWith('/administrator') || path.startsWith('/api/support')) {
-    // ✅ Get token from cookie
+    // Edge middleware: keep checks shallow. Deeper auth/role enforcement happens server-side.
     const token = req.cookies.get('payload-token')?.value
 
     if (!token) {
@@ -29,38 +29,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    try {
-      console.log(`🔐 Checking admin access for ${path}`)
-      
-      // ✅ Use Payload's built-in REST API endpoint
-      const payloadUrl = process.env.NEXT_PUBLIC_PAYLOAD_URL || 'http://localhost:3000'
-      
-      const response = await fetch(`${payloadUrl}/api/users?limit=1`, {
-        headers: {
-          Authorization: `JWT ${token}`,
-        },
-        cache: 'no-store',
-      })
-
-      if (!response.ok) {
-        console.error(`❌ Auth check failed: ${response.status}`)
-        const url = req.nextUrl.clone()
-        url.pathname = '/auth'
-        url.searchParams.set('redirect', path)
-        return NextResponse.redirect(url)
-      }
-
-      // ✅ Token is valid and authenticated - allow access
-      // The admin layout will verify the admin role and redirect if needed
-      console.log(`✅ Valid auth token verified for ${path}`)
-      return NextResponse.next()
-    } catch (error) {
-      console.error('❌ Admin middleware verification error:', error)
-      const url = req.nextUrl.clone()
-      url.pathname = '/auth'
-      url.searchParams.set('redirect', path)
-      return NextResponse.redirect(url)
-    }
+    return NextResponse.next()
   }
 
   // 3. Skip remaining public API routes

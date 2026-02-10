@@ -55,7 +55,7 @@ export default function ProductDetailClient({
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     product.variants?.[0]?.id ?? null,
   );
-  const [quantity, _setQuantity] = useState(1);
+  const [quantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { isWishlisted: checkWishlisted, toggleWishlist } = useWishlist();
   const isWishlisted = checkWishlisted(product.id || "");

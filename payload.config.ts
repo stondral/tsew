@@ -26,6 +26,7 @@ import { SupportMessages } from "./collections/SupportMessages"
 import { Wishlist } from "./collections/Wishlist"
 import { Reviews } from "./collections/Reviews";
 import { MediaFolders } from "./collections/MediaFolders";
+import { VerificationSessions } from "./collections/VerificationSessions";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -37,7 +38,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, MediaFolders, Categories, Products, Orders, Addresses, Feedback, Warehouses, DiscountCodes, Sellers, SellerMembers, TeamInvites, Carts, SupportTickets, SupportMessages, Wishlist, Reviews],
+  collections: [Users, Media, MediaFolders, Categories, Products, Orders, Addresses, Feedback, Warehouses, DiscountCodes, Sellers, SellerMembers, TeamInvites, Carts, SupportTickets, SupportMessages, Wishlist, Reviews, VerificationSessions],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",
   email: nodemailerAdapter({

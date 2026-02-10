@@ -10,6 +10,7 @@ export const Users: CollectionConfig = {
   auth: {
     // ✅ Store token in a httpOnly cookie for server-side middleware
     tokenExpiration: 7 * 24 * 60 * 60, // 7 days
+    maxLoginAttempts: 5,
     verify: {
       generateEmailSubject: () => "Verify your Stond Emporium account",
       generateEmailHTML: (args: any) => {
@@ -44,7 +45,8 @@ export const Users: CollectionConfig = {
   // ✅ 2. Simplified Access Control
   // ✅ 2. Simplified Access Control
   access: {
-    read: ({ req: { user } }) => {
+    read: async ({ req }) => {
+      const { user } = req;
       const authUser = user as any
       // 1. If no user is logged in, only allow reading sellers (for frontend/middleware)
       if (!authUser) {
@@ -62,18 +64,40 @@ export const Users: CollectionConfig = {
 
       // 3. Allow sellers and sellerEmployees to read their teammates
       if (authUser.role === "seller" || authUser.role === "sellerEmployee") {
+        const memberships = await req.payload.find({
+          collection: 'seller-members',
+          where: { user: { equals: authUser.id } },
+          limit: 100,
+          depth: 0,
+          overrideAccess: true,
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mySellerIds = memberships.docs.map((m: any) => m.seller);
+
+        const teammateIds = new Set<string>();
+        teammateIds.add(String(authUser.id));
+
+        if (mySellerIds.length > 0) {
+          const teammateMemberships = await req.payload.find({
+            collection: 'seller-members',
+            where: { seller: { in: mySellerIds } },
+            limit: 500,
+            depth: 0,
+            overrideAccess: true,
+          });
+
+          teammateMemberships.docs.forEach((m: any) => {
+            const uid = typeof m.user === 'object' ? m.user?.id : m.user;
+            if (uid) teammateIds.add(String(uid));
+          });
+        }
+
         return {
-            id: {
-                // This is a placeholder for the "is teammate" logic. 
-                // In practice, Payload's read access often returns a query.
-                // For nested visibility like this, we'll return a query that checks Sellers or SellerMembers
-                // However, since we don't have a direct seller link on User, we rely on the membership being visible.
-                // A better approach is to allow reading any user that shares a seller membership.
-                // For now, let's allow them to read users who are in the same organizations.
-                exists: true // We will refine this with a more specific query if needed, 
-                // but usually, team members are found via the SellerMembers collection which filters correctly.
-            }
-        } as any
+          id: {
+            in: Array.from(teammateIds),
+          },
+        } as any;
       }
 
       // 4. Keep the "User sees only self" rule for regular users

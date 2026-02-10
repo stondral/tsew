@@ -9,14 +9,19 @@ export const Sellers: CollectionConfig = {
   access: {
     read: () => true,
     create: ({ req }) => !!req.user,
-    update: ({ req }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    update: async ({ req }) => {
       const user = req.user as any
       if (!user) return false
       if (user.role === 'admin') return true
+
+      const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+      const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'seller.manage');
+
       return {
-        owner: { equals: user.id },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        or: [
+          { owner: { equals: user.id } },
+          { id: { in: allowedSellers } }
+        ]
       } as any
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

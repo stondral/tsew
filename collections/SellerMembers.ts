@@ -7,36 +7,63 @@ export const SellerMembers: CollectionConfig = {
     defaultColumns: ['seller', 'user', 'role', 'joinedAt'],
   },
   access: {
-    read: ({ req }) => {
+    read: async ({ req }) => {
       if (!req.user) return false
       const user = req.user as any
       if (user.role === 'admin') return true
       
-      // Allow users to see all members in organizations they belong to
-      // We'll use a relationship-based filter if possible, or allow read based on common 'seller' linkage.
-      // This is often handled by a field-level check or a custom query.
-      return true // For now, allow read but we should filter by seller organization in the query itself.
-      // Better: return { 'seller.members.user': { equals: user.id } } if supported, 
-      // but simple 'true' with frontend-side filtering is safer for now until complex RBAC is verified.
+      const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+      const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'seller.manage'); // Or lower permission if just viewing team
+      
+      return {
+        seller: { in: allowedSellers },
+      } as any
     },
-    create: ({ req }) => {
+    create: async ({ req }) => {
       if (!req.user) return false
       const user = req.user as any
-      return user.role === 'admin' || user.role === 'seller'
+      if (user.role === 'admin') return true
+      
+      return user.role === 'seller'
     },
-    update: ({ req }) => {
+    update: async ({ req }) => {
        if (!req.user) return false
        const user = req.user as any
        if (user.role === 'admin') return true
-       // For now, allow sellers to update roles in their organization
-       return user.role === 'seller'
+
+       const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+       const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'seller.manage');
+       
+       return {
+         seller: { in: allowedSellers },
+       } as any
     },
-    delete: ({ req }) => {
+    delete: async ({ req }) => {
         if (!req.user) return false
         const user = req.user as any
         if (user.role === 'admin') return true
-        return user.role === 'seller'
+
+        const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
+        const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'seller.manage');
+        
+        return {
+          seller: { in: allowedSellers },
+        } as any
     },
+  },
+  hooks: {
+    beforeChange: [
+      async ({ data, req, operation }) => {
+        if (operation === 'create' && req.user && (req.user as any).role !== 'admin') {
+           const { hasPermission } = await import('@/lib/rbac/permissions');
+           const canManage = await hasPermission(req.payload, req.user.id, data.seller, 'seller.manage');
+           if (!canManage) {
+              throw new Error("You do not have permission to add members to this organization");
+           }
+        }
+        return data;
+      }
+    ],
   },
   fields: [
     {

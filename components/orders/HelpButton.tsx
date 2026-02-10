@@ -26,14 +26,12 @@ export function HelpButton({ orderId, orderNumber }: HelpButtonProps) {
 
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("payload-token");
-      
       const response = await fetch("/api/support/create-ticket", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           subject,
           message,

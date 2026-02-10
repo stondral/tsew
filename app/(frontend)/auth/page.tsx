@@ -25,6 +25,15 @@ function AuthContent() {
   const { login, register, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
 
+  // Live verification state
+  const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
+  const [pendingEmailForAutoLogin, setPendingEmailForAutoLogin] = useState<string | null>(null);
+  const [pendingPasswordForAutoLogin, setPendingPasswordForAutoLogin] = useState<string | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<
+    "idle" | "listening" | "verified" | "auto-logging-in" | "error"
+  >("idle");
+  const [verificationStatusMessage, setVerificationStatusMessage] = useState<string>("");
+
   // View State: 'auth' | 'forgot-password' | 'forgot-password-success' | 'register-success'
   const [viewState, setViewState] = useState<
     "auth" | "forgot-password" | "forgot-password-success" | "register-success"
@@ -53,6 +62,60 @@ function AuthContent() {
       router.push(redirectPath);
     }
   }, [isAuthenticated, router, redirectPath]);
+
+  // Live verification listener: when waiting for verification, listen and auto-login on success.
+  useEffect(() => {
+    if (viewState !== "register-success") return;
+    if (!verificationSessionId) return;
+
+    setVerificationStatus("listening");
+    setVerificationStatusMessage("Waiting for email verification...");
+
+    const url = `/api/auth/verify/stream?sessionId=${encodeURIComponent(verificationSessionId)}`;
+    const es = new EventSource(url);
+
+    es.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data?.type !== "verified") return;
+
+        setVerificationStatus("verified");
+        setVerificationStatusMessage("Email verified — signing you in...");
+        es.close();
+
+        if (!pendingEmailForAutoLogin || !pendingPasswordForAutoLogin) {
+          setVerificationStatus("error");
+          setVerificationStatusMessage(
+            "Email verified, but we can’t auto-sign-in on this device. Please sign in."
+          );
+          return;
+        }
+
+        setVerificationStatus("auto-logging-in");
+        await login(pendingEmailForAutoLogin, pendingPasswordForAutoLogin);
+        router.push(redirectPath);
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    es.onerror = () => {
+      // Keep UI calm; EventSource will retry automatically.
+      // If it becomes fatal, we'll just keep the "verify your email" screen.
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [
+    viewState,
+    verificationSessionId,
+    pendingEmailForAutoLogin,
+    pendingPasswordForAutoLogin,
+    login,
+    redirectPath,
+    router,
+  ]);
 
   // --- Handlers ---
 
@@ -83,7 +146,27 @@ function AuthContent() {
         } catch (resendErr) {
           console.error("Failed to resend verification email:", resendErr);
         }
-        
+
+        // Create a verification session so this device can listen for verification
+        try {
+          const sessionRes = await fetch("/api/auth/verification-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ email: loginEmail }),
+          });
+          const sessionData = await sessionRes.json().catch(() => ({}));
+          if (sessionRes.ok && sessionData?.sessionId) {
+            setVerificationSessionId(sessionData.sessionId);
+          }
+        } catch {
+          // non-fatal
+        }
+
+        // Save creds for auto-login (in-memory only)
+        setPendingEmailForAutoLogin(loginEmail);
+        setPendingPasswordForAutoLogin(loginPassword);
+
         // Update state to show verification message
         setRegisterEmail(loginEmail);
         setViewState("register-success");
@@ -107,12 +190,18 @@ function AuthContent() {
     setIsLoading(true);
 
     try {
-      await register({
+      const result = await register({
         username: registerUsername,
         email: registerEmail,
         phone: registerPhone,
         password: registerPassword,
       });
+
+      // Save session + creds for live verification auto-login
+      setVerificationSessionId(result.sessionId);
+      setPendingEmailForAutoLogin(registerEmail);
+      setPendingPasswordForAutoLogin(registerPassword);
+
       // Registration success
       setViewState("register-success");
     } catch (err: unknown) {
@@ -158,6 +247,13 @@ function AuthContent() {
     setViewState("auth");
     setActiveTab("login");
     setError("");
+
+    setVerificationSessionId(null);
+    setPendingEmailForAutoLogin(null);
+    setPendingPasswordForAutoLogin(null);
+    setVerificationStatus("idle");
+    setVerificationStatusMessage("");
+
     // Optional: clear forms
     setForgotPasswordEmail("");
   };
@@ -240,6 +336,22 @@ function AuthContent() {
                   Please check your inbox. If you don&apos;t see the email, check
                   your spam folder.
                 </p>
+
+                {viewState === "register-success" && (
+                  <div className="text-center text-sm text-gray-500 space-y-2">
+                    <p>
+                      {verificationStatusMessage ||
+                        "Once you verify your email, we’ll sign you in automatically on this device."}
+                    </p>
+                    {verificationStatus === "listening" && (
+                      <p className="text-xs">Live verification is active.</p>
+                    )}
+                    {verificationStatus === "error" && (
+                      <p className="text-xs text-red-500">{verificationStatusMessage}</p>
+                    )}
+                  </div>
+                )}
+
                 <Button
                   className="w-full h-11 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-md"
                   onClick={resetToLogin}
