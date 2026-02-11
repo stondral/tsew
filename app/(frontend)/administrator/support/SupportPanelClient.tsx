@@ -3,12 +3,17 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { 
   Search, 
+  Filter, 
   MessageCircle, 
+  User, 
   Clock, 
   AlertTriangle,
+  ChevronRight,
   UserPlus,
   CheckCircle2,
+  Wifi,
   WifiOff,
+  Bell,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,7 +23,6 @@ import { ChatWindow } from "@/components/admin/ChatWindow";
 import { OrderHistory } from "@/components/admin/OrderHistory";
 
 interface SupportPanelClientProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initialTickets: any[];
   adminId: string;
 }
@@ -43,7 +47,20 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
       try {
         console.log("📡 SupportPanelClient: Initializing SSE stream for admin notifications...");
         
-        // Connect to admin notifications stream (cookie-auth)
+        // Get token for authentication
+        const token = typeof window !== 'undefined' 
+          ? localStorage.getItem('payload-token')
+          : null;
+        
+        if (!token) {
+          console.warn("⚠️ SupportPanelClient: No auth token found - SSE will not connect");
+          setIsConnected(false);
+          return;
+        }
+
+        console.log("🔑 SupportPanelClient: Token found, connecting to SSE stream");
+        
+        // Connect to admin notifications stream
         const url = `/api/support/stream?ticketId=admin-notifications`;
         const eventSource = new EventSource(url);
         eventSourceRef.current = eventSource;

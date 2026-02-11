@@ -178,7 +178,7 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
     
     try {
       data = JSON.parse(responseText);
-    } catch {
+    } catch (e) {
       // Try parsing XML response for Delhivery's native format
       console.warn("Non-JSON response from warehouse registration, attempting XML parsing");
       
@@ -265,36 +265,12 @@ export interface DelhiveryShipmentParams {
   consignee?: string; // Name
 }
 
-interface DelhiveryShipmentData {
-  name: string;
-  order: string;
-  phone: string;
-  add: string;
-  pin: string;
-  payment_mode: string;
-  products_desc: string;
-  pickup_location: string;
-  weight: string;
-  shipping_mode: string;
-  country: string;
-  shipment_length?: string;
-  shipment_width?: string;
-  shipment_height?: string;
-  cod_amount?: string;
-  hsn_code?: string;
-  consignee?: string;
-  seller_add?: string;
-  seller_name?: string;
-  total_amount?: string;
-  [key: string]: string | undefined;
-}
-
 export async function createShipment(params: DelhiveryShipmentParams) {
   const url = `${DELHIVERY_API_URL}/api/cmu/create.json`;
   
   // Build shipment object according to official Delhivery API documentation
   // See: https://one.delhivery.com/developer-portal/document/b2c/detail/order-creation
-  const shipment: DelhiveryShipmentData = {
+  const shipment: any = {
     name: params.name,
     order: params.order,
     phone: params.phone,
@@ -320,7 +296,7 @@ export async function createShipment(params: DelhiveryShipmentParams) {
   }
   
   // Handle COD payment specifics
-  if (params.payment_mode === 'COD') {
+  if (params.payment_mode === 'COD' || params.payment_mode === 'COD') {
     if (params.amount && params.amount !== '0') {
       shipment.cod_amount = params.amount;
     }
@@ -484,44 +460,6 @@ export async function schedulePickup(params: { pickup_location: string, pickup_d
     return await response.json();
   } catch (error) {
     console.error("Delhivery Pickup scheduling failed:", error);
-    return null;
-  }
-}
-
-/**
- * Track shipment using Waybill or Order ID
- * Documentation: https://one.delhivery.com/developer-portal/document/b2c/get/tracking
- */
-export async function trackShipment(params: { waybill?: string, ref_ids?: string }) {
-  const url = new URL(`${DELHIVERY_API_URL}/api/v1/packages/json/`);
-  
-  if (params.waybill) {
-    url.searchParams.append("waybill", params.waybill);
-  }
-  if (params.ref_ids) {
-    url.searchParams.append("ref_ids", params.ref_ids);
-  }
-
-  console.log("🔍 Tracking Delhivery shipment:", params.waybill || params.ref_ids);
-
-  try {
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Authorization': `Token ${DELHIVERY_TOKEN}`,
-        'Content-Type': 'application/json',
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Delhivery Track API error (${response.status}): ${errorText}`);
-      throw new Error(`Delhivery Track API error: ${response.statusText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error("Delhivery Track fetch failed:", error);
     return null;
   }
 }

@@ -16,50 +16,72 @@ export async function POST(request: NextRequest) {
 
     console.log(`📨 Creating support ticket for order ${orderNumber}`);
 
-    const payload = await getPayload({ config });
-    const { user } = await payload.auth({ headers: request.headers });
+    // Get auth token
+    const token = request.cookies.get('payload-token')?.value ||
+      request.headers.get('Authorization')?.replace('Bearer ', '');
 
-    if (!user) {
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Create support ticket
-    const ticket = await payload.create({
-      collection: 'support-tickets',
-      data: {
-        customer: user.id,
-        subject,
-        order: orderId,
-        status: 'open',
-        priority: 'normal',
-      },
-      overrideAccess: true,
-    });
+    // Decode JWT to get user ID
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      }
 
-    console.log(`✅ Ticket created with ID: ${ticket.id}`);
+      const payload = JSON.parse(
+        Buffer.from(parts[1], 'base64').toString('utf-8')
+      );
 
-    // Create initial message
-    await payload.create({
-      collection: 'support-messages',
-      data: {
-        ticket: ticket.id,
-        sender: user.id,
-        senderType: 'customer',
-        content: message,
-        deliveryStatus: 'sent',
-      },
-      overrideAccess: true,
-    });
+      const userId = payload.id;
+      if (!userId) {
+        return NextResponse.json({ error: 'Invalid token payload' }, { status: 401 });
+      }
 
-    console.log(`✅ Initial message created for ticket ${ticket.id}`);
+      // Get Payload instance
+      const payloadInstance = await getPayload({ config });
 
-    return NextResponse.json({
-      success: true,
-      ticket: {
-        id: ticket.id,
-        ticketNumber: ticket.ticketNumber,
-      },
-    });
+      // Create support ticket
+      const ticket = await (payloadInstance as any).create({
+        collection: 'support-tickets',
+        data: {
+          customer: userId,
+          subject,
+          order: orderId,
+          status: 'open',
+          priority: 'normal',
+        },
+      });
+
+      console.log(`✅ Ticket created with ID: ${ticket.id}`);
+
+      // Create initial message
+      await (payloadInstance as any).create({
+        collection: 'support-messages',
+        data: {
+          ticket: ticket.id,
+          sender: userId,
+          senderType: 'customer',
+          content: message,
+          deliveryStatus: 'sent',
+        },
+      });
+
+      console.log(`✅ Initial message created for ticket ${ticket.id}`);
+
+      return NextResponse.json({
+        success: true,
+        ticket: {
+          id: ticket.id,
+          ticketNumber: ticket.ticketNumber,
+        },
+      });
+    } catch (err) {
+      console.error('❌ JWT decode error:', err);
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
   } catch (error) {
     console.error('❌ Failed to create ticket:', error);
     return NextResponse.json(

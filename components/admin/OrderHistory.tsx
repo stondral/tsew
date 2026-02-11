@@ -1,25 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Package, Calendar, AlertTriangle } from "lucide-react";
+import { Package, ChevronRight, Calendar, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { resolveMediaUrl } from "@/lib/utils";
-
-interface OrderItem {
-  productName: string;
-  productImage?: string;
-}
-
-interface Order {
-  id: string;
-  orderNumber?: string;
-  status: string;
-  createdAt: string;
-  total?: number;
-  items?: OrderItem[];
-}
 
 interface OrderHistoryProps {
   customerId: string;
@@ -27,7 +13,7 @@ interface OrderHistoryProps {
 }
 
 export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps) {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,10 +22,14 @@ export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps)
       try {
         setIsLoading(true);
         setError(null);
+        const token = localStorage.getItem("payload-token");
+
         const response = await fetch(
           `/api/admin/customer-orders?customerId=${customerId}`,
           {
-            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
@@ -131,7 +121,7 @@ export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps)
               </div>
 
               <div className="flex gap-2 mb-2">
-                {order.items?.slice(0, 3).map((item: OrderItem, idx: number) => (
+                {order.items?.slice(0, 3).map((item: any, idx: number) => (
                   <div
                     key={idx}
                     className="h-6 w-6 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600 flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -149,10 +139,10 @@ export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps)
                     )}
                   </div>
                 ))}
-                {(order.items?.length ?? 0) > 3 && (
+                {order.items?.length > 3 && (
                   <div className="h-6 w-6 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600 flex items-center justify-center flex-shrink-0">
                     <span className="text-[7px] font-black text-slate-500">
-                      +{(order.items?.length ?? 0) - 3}
+                      +{order.items.length - 3}
                     </span>
                   </div>
                 )}

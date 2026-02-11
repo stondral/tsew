@@ -26,12 +26,14 @@ export function HelpButton({ orderId, orderNumber }: HelpButtonProps) {
 
     setIsLoading(true);
     try {
+      const token = localStorage.getItem("payload-token");
+      
       const response = await fetch("/api/support/create-ticket", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        credentials: "include",
         body: JSON.stringify({
           subject,
           message,
@@ -89,7 +91,7 @@ export function HelpButton({ orderId, orderNumber }: HelpButtonProps) {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">Ticket Created!</h3>
                 <p className="text-sm text-gray-600">
-                  We&apos;ve created a support ticket for your order. Our team will respond shortly.
+                  We've created a support ticket for your order. Our team will respond shortly.
                 </p>
               </div>
             ) : (

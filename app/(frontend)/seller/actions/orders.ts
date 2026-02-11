@@ -5,12 +5,6 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { hasPermission } from "@/lib/rbac/permissions";
-
-interface AuthenticatedUser {
-  id: string;
-  role?: string;
-}
 
 export async function acceptOrderAction(
   orderId: string, 
@@ -26,46 +20,32 @@ export async function acceptOrderAction(
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const authUser = user as any as AuthenticatedUser;
-  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin' && authUser.role !== 'sellerEmployee')) {
+  if (!user || ((user as any).role !== 'seller' && (user as any).role !== 'admin')) {
     return { ok: false, error: "Unauthorized" };
   }
 
   try {
     let trackingId: string | undefined;
-    let carrierResponse: unknown;
+    let carrierResponse: any;
 
     if (deliveryData.provider === "Delhivery") {
        const { createShipment, schedulePickup } = await import("@/lib/delhivery");
        
        // 1. Fetch full data for manifestation
-       const order = await payload.findByID({
+       const order = await (payload as any).findByID({
          collection: "orders",
          id: orderId,
          depth: 1,
          overrideAccess: true,
        });
 
-       if (!order) {
-         throw new Error("Order not found");
-       }
-
-       // Explicit permission check
-       const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
-       const canAccept = await hasPermission(payload, authUser.id, orderSellerId, 'order.fulfill');
-       
-       if (!canAccept && authUser.role !== 'admin') {
-         throw new Error("You do not have permission to accept orders for this organization");
-       }
-
-       const warehouse = await payload.findByID({
+       const warehouse = await (payload as any).findByID({
          collection: "warehouses",
          id: deliveryData.pickupWarehouse,
          overrideAccess: true,
        });
 
-       const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await payload.findByID({
+       const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await (payload as any).findByID({
          collection: "addresses",
          id: order.shippingAddress,
          overrideAccess: true,
@@ -87,8 +67,8 @@ export async function acceptOrderAction(
         const getShipmentPayload = () => {
           // Build complete address string safely
           const addressParts = [];
-          if (address.address) addressParts.push(address.address);
-          if (address.apartment) addressParts.push(address.apartment);
+          if (address.addressLine1) addressParts.push(address.addressLine1);
+          if (address.addressLine2) addressParts.push(address.addressLine2);
           if (address.city) addressParts.push(address.city);
           if (address.state) addressParts.push(address.state);
           const completeAddress = addressParts.length > 0 ? addressParts.join(", ") : "N/A";
@@ -98,18 +78,18 @@ export async function acceptOrderAction(
           const payload = {
             pickup_location: warehouse.label,
             origin: warehouse.postalCode, // Pincode for origin
-            consignee: `${address.firstName || ""} ${address.lastName || ""}`.trim() || "Customer",
-            name: `${address.firstName || ""} ${address.lastName || ""}`.trim() || "Customer",
+            consignee: address.fullName || address.name || "Customer",
+            name: address.fullName || address.name || "Customer",
             add: completeAddress,
             pin: address.postalCode,
-            phone: address.phone || "0000000000",
+            phone: address.phoneNumber || "0000000000",
             order: order.orderNumber || order.id,
             payment_mode: isCOD ? ('COD' as const) : ('Prepaid' as const),
             amount: isCOD ? String(order.total) : '0', // COD amount for collection
             cod_amount: isCOD ? String(order.total) : undefined, // Explicitly set cod_amount for COD orders
             weight: String(deliveryData.overrides?.gm || 500),
-            shipping_mode: (deliveryData.overrides?.md === 'S' ? 'Surface' : 'Express') as 'Surface' | 'Express',
-            products_desc: order.items.map((i: { productName: string; quantity: number }) => `${i.productName} (x${i.quantity})`).join(", "),
+            shipping_mode: (deliveryData.overrides?.md === 'S' ? 'Surface' : 'Express') as any,
+            products_desc: order.items.map((i: any) => `${i.productName} (x${i.quantity})`).join(", "),
             dimensions: dims,
             client: "STOND EMPORIUM"
           };
@@ -219,7 +199,7 @@ export async function acceptOrderAction(
     }
 
     // 3. Complete local order acceptance
-    await acceptOrder(orderId, authUser.id, {
+    await acceptOrder(orderId, user.id, {
       ...deliveryData,
       trackingId,
       carrierResponse
@@ -228,80 +208,11 @@ export async function acceptOrderAction(
     revalidatePath("/seller/orders/incoming");
     return { ok: true, trackingId };
 
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Failed to accept order:", error);
-    return { ok: false, error: (error as Error).message || "Failed to accept order" };
+    return { ok: false, error: error.message || "Failed to accept order" };
   }
 }
-
-export async function updateOrderAddressAction(
-  orderId: string,
-  addressData: {
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-    address?: string;
-    apartment?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-  }
-) {
-  const payload = await getPayload({ config });
-  const requestHeaders = await headers();
-  const { user } = await payload.auth({ headers: requestHeaders });
-
-  const authUser = user as AuthenticatedUser;
-  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin')) {
-    return { ok: false, error: "Unauthorized" };
-  }
-
-  try {
-    const order = await payload.findByID({
-      collection: "orders",
-      id: orderId,
-      depth: 1,
-      overrideAccess: true,
-    });
-
-    if (!order) throw new Error("Order not found");
-
-    // Explicit permission check
-    const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
-    const canEdit = await hasPermission(payload, authUser.id, orderSellerId, 'order.update_status');
-    
-    if (!canEdit && authUser.role !== 'admin') {
-      throw new Error("You do not have permission to modify this order's address");
-    }
-
-    const addressId = typeof order.shippingAddress === 'object' ? order.shippingAddress.id : order.shippingAddress;
-
-    if (!addressId) throw new Error("No shipping address associated with this order");
-
-    await payload.update({
-      collection: "addresses",
-      id: addressId,
-      data: {
-        firstName: addressData.firstName,
-        lastName: addressData.lastName,
-        phone: addressData.phone,
-        address: addressData.address,
-        apartment: addressData.apartment,
-        city: addressData.city,
-        state: addressData.state,
-        postalCode: addressData.postalCode,
-      },
-      overrideAccess: true,
-    });
-
-    revalidatePath("/seller/orders");
-    return { ok: true };
-  } catch (error: unknown) {
-    console.error("Failed to update order address:", error);
-    return { ok: false, error: (error as Error).message || "Failed to update address" };
-  }
-}
-
 
 export async function getDelhiveryStatsAction(
   orderId: string, 
@@ -312,13 +223,12 @@ export async function getDelhiveryStatsAction(
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  const authUser = user as AuthenticatedUser;
-  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin')) {
+  if (!user || ((user as any).role !== 'seller' && (user as any).role !== 'admin')) {
     return { ok: false, error: "Unauthorized" };
   }
 
   try {
-    const order = await payload.findByID({
+    const order = await (payload as any).findByID({
       collection: "orders",
       id: orderId,
       overrideAccess: true,
@@ -326,15 +236,7 @@ export async function getDelhiveryStatsAction(
 
     if (!order) throw new Error("Order not found");
 
-    // Explicit permission check
-    const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
-    const canView = await hasPermission(payload, authUser.id, orderSellerId, 'order.view');
-    
-    if (!canView && authUser.role !== 'admin') {
-      throw new Error("You do not have permission to view this order's delivery stats");
-    }
-
-    const warehouse = await payload.findByID({
+    const warehouse = await (payload as any).findByID({
       collection: "warehouses",
       id: warehouseId,
       overrideAccess: true,
@@ -342,7 +244,7 @@ export async function getDelhiveryStatsAction(
 
     if (!warehouse) throw new Error("Warehouse not found");
 
-    const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await payload.findByID({
+    const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await (payload as any).findByID({
       collection: "addresses",
       id: order.shippingAddress,
       overrideAccess: true,
@@ -353,7 +255,7 @@ export async function getDelhiveryStatsAction(
     // Calculate total weight (default to 500g per item if missing)
     let calculatedWeight = 0;
     for (const item of order.items) {
-      const product = await payload.findByID({
+      const product = await (payload as any).findByID({
         collection: "products",
         id: item.productId,
         overrideAccess: true,
@@ -449,55 +351,8 @@ export async function getDelhiveryStatsAction(
         totalWeight
       } 
     };
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Failed to fetch Delhivery stats:", error);
-    return { ok: false, error: (error as Error).message || "Failed to fetch delivery stats" };
-  }
-}
-
-export async function searchOrderAction(orderNumber: string) {
-  const payload = await getPayload({ config });
-  const requestHeaders = await headers();
-  const { user } = await payload.auth({ headers: requestHeaders });
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const authUser = user as any;
-  if (!authUser || (authUser.role !== 'seller' && authUser.role !== 'admin' && authUser.role !== 'sellerEmployee')) {
-    return { ok: false, error: "Unauthorized" };
-  }
-
-  try {
-    const orders = await payload.find({
-      collection: "orders",
-      where: {
-        orderNumber: { equals: orderNumber.trim() },
-      },
-      depth: 0,
-      limit: 1,
-      overrideAccess: true, // We will manually verify ownership
-    });
-
-    if (orders.docs.length === 0) {
-      return { ok: false, error: "Order not found" };
-    }
-
-    const order = orders.docs[0];
-
-    // Ownership check for sellers/employees
-    if (authUser.role !== 'admin') {
-      const { getSellersWithPermission } = await import("@/lib/rbac/permissions");
-      const allowedSellers = await getSellersWithPermission(payload, authUser.id, 'order.view');
-      
-      const orderSellerId = typeof order.seller === 'object' ? order.seller.id : order.seller;
-      
-      if (!allowedSellers.includes(orderSellerId)) {
-        return { ok: false, error: "Order not found or access denied" };
-      }
-    }
-
-    return { ok: true, id: order.id };
-  } catch (error) {
-    console.error("Order search error:", error);
-    return { ok: false, error: "Something went wrong" };
+    return { ok: false, error: error.message || "Failed to fetch delivery stats" };
   }
 }
