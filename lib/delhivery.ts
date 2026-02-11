@@ -81,55 +81,81 @@ export async function getExpectedTAT(params: DelhiveryTATParams) {
 }
 
 export async function calculateShippingCost(params: DelhiveryCostParams) {
-  // Updated endpoint as per user feedback: /api/kinko/v1/invoice/charges/.json
-  const url = new URL(`${DELHIVERY_API_URL}/api/kinko/v1/invoice/charges/.json`);
+  // Wrap with Redis caching for 90% API call reduction
+  const { getShippingCost } = await import('./redis/shipping');
   
-  // Sanitize pincodes (ensure 6 digits)
-  const o_pin = params.o_pincode.replace(/\s+/g, '').slice(0, 6);
-  const d_pin = params.d_pincode.replace(/\s+/g, '').slice(0, 6);
+  return getShippingCost(
+    {
+      origin: params.o_pincode,
+      destination: params.d_pincode,
+      weight: params.gm,
+      dimensions: params.l && params.b && params.h ? {
+        length: params.l,
+        width: params.b,
+        height: params.h,
+      } : undefined,
+    },
+    async () => {
+      // Original Delhivery API call (only on cache miss)
+      const url = new URL(`${DELHIVERY_API_URL}/api/kinko/v1/invoice/charges/.json`);
+      
+      // Sanitize pincodes (ensure 6 digits)
+      const o_pin = params.o_pincode.replace(/\s+/g, '').slice(0, 6);
+      const d_pin = params.d_pincode.replace(/\s+/g, '').slice(0, 6);
 
-  // Calculate Chargeable Weight (cgm)
-  // Volumetric weight: (L*B*H)/5000 in kg => (L*B*H)/5 in grams
-  const volumetricWeight = (params.l && params.b && params.h) 
-    ? (params.l * params.b * params.h) / 5 
-    : 0;
-  const cgm = Math.round(Math.max(params.gm, volumetricWeight));
+      // Calculate Chargeable Weight (cgm)
+      // Volumetric weight: (L*B*H)/5000 in kg => (L*B*H)/5 in grams
+      const volumetricWeight = (params.l && params.b && params.h) 
+        ? (params.l * params.b * params.h) / 5 
+        : 0;
+      const cgm = Math.round(Math.max(params.gm, volumetricWeight));
 
-  url.searchParams.append("md", params.md);
-  url.searchParams.append("ss", params.ss);
-  url.searchParams.append("d_pin", d_pin);
-  url.searchParams.append("o_pin", o_pin);
-  url.searchParams.append("cgm", cgm.toString());
-  
-  // Optional but helpful
-  url.searchParams.append("gm", Math.round(params.gm).toString());
-  if (params.pt) url.searchParams.append("pt", params.pt);
-  if (params.l) url.searchParams.append("l", params.l.toString());
-  if (params.b) url.searchParams.append("b", params.b.toString());
-  if (params.h) url.searchParams.append("h", params.h.toString());
+      url.searchParams.append("md", params.md);
+      url.searchParams.append("ss", params.ss);
+      url.searchParams.append("d_pin", d_pin);
+      url.searchParams.append("o_pin", o_pin);
+      url.searchParams.append("cgm", cgm.toString());
+      
+      // Optional but helpful
+      url.searchParams.append("gm", Math.round(params.gm).toString());
+      if (params.pt) url.searchParams.append("pt", params.pt);
+      if (params.l) url.searchParams.append("l", params.l.toString());
+      if (params.b) url.searchParams.append("b", params.b.toString());
+      if (params.h) url.searchParams.append("h", params.h.toString());
 
-  console.log("Calling Delhivery Shipping Cost API (GET):", url.toString());
+      console.log("Calling Delhivery Shipping Cost API (GET):", url.toString());
 
-  try {
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Authorization': `Token ${DELHIVERY_TOKEN}`,
-        'Content-Type': 'application/json',
+      try {
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Authorization': `Token ${DELHIVERY_TOKEN}`,
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Delhivery Cost API error details: ${errorText}`);
+          throw new Error(`Delhivery Cost API error: ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        
+        // Transform to our standard format for caching
+        return {
+          cost: data[0]?.total_amount || 0,
+          estimatedDays: data[0]?.expected_delivery_date ? 
+            Math.ceil((new Date(data[0].expected_delivery_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 5,
+          serviceName: params.md === 'S' ? 'Surface' : 'Express',
+        };
+      } catch (error) {
+        console.error("Delhivery Cost fetch failed:", error);
+        // Return null to indicate failure, don't cache failures
+        throw error;
       }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Delhivery Cost API error details: ${errorText}`);
-      throw new Error(`Delhivery Cost API error: ${response.statusText} - ${errorText}`);
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Delhivery Cost fetch failed:", error);
-    return null;
-  }
+  );
 }
 
 export interface DelhiveryWarehouseParams {

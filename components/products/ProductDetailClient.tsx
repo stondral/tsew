@@ -340,7 +340,7 @@ export default function ProductDetailClient({
                 </div>
                 <Button variant="outline" size="sm" className="rounded-full" asChild>
                   <Link 
-                    href={`http://${product.seller.username}.${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost:3000'}`}
+                    href={`https://${product.seller.username}.stondemporium.tech`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

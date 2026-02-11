@@ -167,6 +167,19 @@ export const DiscountCodes: CollectionConfig = {
           `[Discount Code] ${action.toUpperCase()}: ${doc.code} by ${(req.user as any)?.email || "system"}`
         );
       },
+      
+      // Redis Cache Invalidation
+      async ({ doc, operation }) => {
+        if (operation === 'create' || operation === 'update') {
+          try {
+            const { invalidateDiscountCode } = await import('@/lib/redis/discount');
+            await invalidateDiscountCode(doc.code);
+            console.log(`✅ Invalidated discount code cache: ${doc.code}`);
+          } catch (error) {
+            console.error('Failed to invalidate discount code cache:', error);
+          }
+        }
+      },
     ],
   },
 }

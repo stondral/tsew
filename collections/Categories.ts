@@ -67,5 +67,28 @@ export const Categories: CollectionConfig = {
         return data
       },
     ],
+    
+    // Redis Cache Invalidation
+    afterChange: [
+      async ({ doc, operation }) => {
+        // Invalidate category cache when category is created or updated
+        if (operation === 'create' || operation === 'update') {
+          try {
+            const { invalidateCategory, invalidateCategoryTree } = await import('@/lib/redis/category');
+            
+            // Invalidate the specific category
+            await invalidateCategory(doc.id);
+            
+            // Invalidate entire tree since hierarchy might have changed
+            await invalidateCategoryTree();
+            
+            console.log(`✅ Invalidated category cache: ${doc.id}`);
+          } catch (error) {
+            // Don't fail the operation if cache invalidation fails
+            console.error('Failed to invalidate category cache:', error);
+          }
+        }
+      },
+    ],
   },
 }

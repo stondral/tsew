@@ -178,6 +178,32 @@ export const Products: CollectionConfig = {
         return data
       },
     ],
+    
+    // Redis Cache Invalidation
+    afterChange: [
+      async ({ doc, operation }) => {
+        // Invalidate product cache when product is created or updated
+        if (operation === 'create' || operation === 'update') {
+          try {
+            const { invalidateProduct, invalidateCategory } = await import('@/lib/redis/product');
+            
+            // Invalidate the specific product
+            await invalidateProduct(doc.id);
+            console.log(`✅ Invalidated product cache: ${doc.id}`);
+            
+            // Invalidate category cache if category exists
+            if (doc.category) {
+              const categoryId = typeof doc.category === 'string' ? doc.category : doc.category.id;
+              await invalidateCategory(categoryId);
+              console.log(`✅ Invalidated category cache: ${categoryId}`);
+            }
+          } catch (error) {
+            // Don't fail the operation if cache invalidation fails
+            console.error('Failed to invalidate product cache:', error);
+          }
+        }
+      },
+    ],
 
     // 🔥 AUTO-EXPIRE FEATURED PRODUCTS (NO CRON)
     beforeRead: [

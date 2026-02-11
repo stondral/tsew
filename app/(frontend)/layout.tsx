@@ -25,7 +25,7 @@ const Layout = ({ children }: LayoutProps) => {
           <ChatButton />
           <Script 
             src="https://checkout.razorpay.com/v1/checkout.js"
-            strategy="lazyOnload"
+            strategy="afterInteractive"
           />
         </CartProvider>
       </WishlistProvider>

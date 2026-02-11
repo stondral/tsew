@@ -6,8 +6,48 @@ import StoreSections from "@/components/storefront/StoreSections";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Home | Stondemporium",
-  description: "Explore the best products from top sellers on Stondemporium. Your one-stop shop for innovation and quality.",
+  title: "Buy Premium Products Online in India | Multi-Vendor Marketplace | Stondemporium",
+  description: "Shop premium products from top sellers at Stondemporium. India's trusted multi-vendor marketplace with fast delivery. Discover jewellery, electronics, fashion & more!",
+  keywords: [
+    "online shopping India",
+    "multi-vendor marketplace",
+    "buy products online India",
+    "premium products",
+    "e-commerce India",
+    "online marketplace",
+    "shop online India",
+    "best deals online",
+    "fast delivery India",
+    "Stondemporium",
+    "jewellery online India",
+    "electronics online",
+    "fashion shopping",
+  ],
+  alternates: {
+    canonical: 'https://stondemporium.tech',
+  },
+  openGraph: {
+    title: "Stondemporium - India's Premium Multi-Vendor Marketplace",
+    description: "Shop premium products from verified sellers. Fast delivery across India.",
+    url: 'https://stondemporium.tech',
+    siteName: 'Stondemporium',
+    locale: 'en_IN',
+    type: 'website',
+    images: [
+      {
+        url: '/icon.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Stondemporium Marketplace',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: "Stondemporium - Premium Online Marketplace",
+    description: "Shop from top sellers with fast delivery across India.",
+    images: ['/icon.jpg'],
+  },
 };
 
 export const dynamic = 'force-dynamic';

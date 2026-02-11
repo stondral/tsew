@@ -14,20 +14,64 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const { q, category } = await searchParams;
   
-  let title = "Explore Products | Stondemporium";
-  let description = "Browse our extensive collection of premium products at Stondemporium.";
+  let title = "Shop Premium Products Online in India | Stondemporium";
+  let description = "Browse our extensive collection of premium products at Stondemporium. Fast delivery across India. Shop now!";
+  let keywords = [
+    "online shopping India",
+    "buy products online",
+    "premium products",
+    "e-commerce India",
+    "shop online",
+    "Stondemporium"
+  ];
 
   if (category) {
-    title = `${category.charAt(0).toUpperCase() + category.slice(1)} Products | Stondemporium`;
-    description = `Find the best ${category} items in our gallery. Curated for quality and style.`;
+    title = `Buy ${category.charAt(0).toUpperCase() + category.slice(1)} Online in India | Stondemporium`;
+    description = `Shop premium ${category} products online at Stondemporium. Best deals with fast shipping across India. Order now!`;
+    keywords = [
+      `buy ${category.toLowerCase()} online`,
+      `${category.toLowerCase()} India`,
+      `${category.toLowerCase()} online shopping`,
+      `best ${category.toLowerCase()}`,
+      `premium ${category.toLowerCase()}`,
+      "online shopping India",
+      "Stondemporium"
+    ];
   }
 
   if (q) {
-    title = `Search results for "${q}" | Stondemporium`;
-    description = `Discover ${q} and more at Stondemporium. Search our marketplace for top-tier innovations.`;
+    title = `${q} - Search Results | Stondemporium`;
+    description = `Find ${q} and more at Stondemporium. Premium products with fast delivery across India. Shop now!`;
+    keywords = [
+      q,
+      `buy ${q.toLowerCase()} online`,
+      `${q.toLowerCase()} India`,
+      "online shopping",
+      "Stondemporium"
+    ];
   }
 
-  return { title, description };
+  return { 
+    title, 
+    description,
+    keywords,
+    alternates: {
+      canonical: 'https://stondemporium.tech/products',
+    },
+    openGraph: {
+      title,
+      description,
+      url: 'https://stondemporium.tech/products',
+      siteName: 'Stondemporium',
+      locale: 'en_IN',
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+  };
 }
 
 interface PageProps {
