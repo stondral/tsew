@@ -35,6 +35,8 @@ export default function BackgroundVideo() {
               fill
               className="object-cover"
               priority
+              loading="eager"
+              fetchPriority="high"
             />
           </motion.div>
         )}
@@ -47,6 +49,7 @@ export default function BackgroundVideo() {
         muted
         loop
         playsInline
+        preload="metadata"
         onLoadedData={() => setIsVideoLoaded(true)}
         initial={{ opacity: 0 }}
         animate={{ opacity: isVideoLoaded ? 1 : 0 }}

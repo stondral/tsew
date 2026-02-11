@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -13,14 +12,10 @@ export default function Hero() {
 
       <div className="container relative z-10 px-4 md:px-6">
         <div className="max-w-3xl">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          >
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-1 text-sm font-medium text-accent mb-6 backdrop-blur">
               <Sparkles className="mr-2 h-4 w-4" />
-              Discover India’s Innovation
+              Discover India&apos;s Innovation
             </div>
 
             <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight mb-6 text-white">
@@ -52,7 +47,7 @@ export default function Hero() {
                 </Button>
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>
