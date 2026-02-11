@@ -3,6 +3,12 @@ import ProductsGrid from "@/components/products/ProductsGrid";
 import { getSellerFromHeaders, getCapabilities, resolveTheme, type ExtendedUser } from "@/lib/seller";
 import StoreLayout from "@/components/storefront/StoreLayout";
 import StoreSections from "@/components/storefront/StoreSections";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home | Stondemporium",
+  description: "Explore the best products from top sellers on Stondemporium. Your one-stop shop for innovation and quality.",
+};
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

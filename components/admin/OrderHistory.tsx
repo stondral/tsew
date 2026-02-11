@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Package, ChevronRight, Calendar, AlertTriangle } from "lucide-react";
+import { Package, Calendar, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -12,8 +12,27 @@ interface OrderHistoryProps {
   selectedOrderId?: string;
 }
 
+interface OrderItem {
+  productName: string;
+  productImage?: {
+    id: string;
+    url: string;
+    alt?: string;
+  };
+  quantity: number;
+}
+
+interface OrderRecord {
+  id: string;
+  orderNumber: string;
+  status: string;
+  createdAt: string;
+  total: number;
+  items: OrderItem[];
+}
+
 export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps) {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,14 +140,14 @@ export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps)
               </div>
 
               <div className="flex gap-2 mb-2">
-                {order.items?.slice(0, 3).map((item: any, idx: number) => (
+                {order.items?.slice(0, 3).map((item, idx) => (
                   <div
                     key={idx}
                     className="h-6 w-6 bg-slate-100 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600 flex items-center justify-center flex-shrink-0 overflow-hidden"
                   >
                     {item.productImage ? (
                       <Image
-                        src={resolveMediaUrl(item.productImage)}
+                        src={resolveMediaUrl(item.productImage?.url || '')}
                         alt={item.productName}
                         width={24}
                         height={24}

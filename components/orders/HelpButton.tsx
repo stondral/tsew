@@ -91,7 +91,7 @@ export function HelpButton({ orderId, orderNumber }: HelpButtonProps) {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">Ticket Created!</h3>
                 <p className="text-sm text-gray-600">
-                  We've created a support ticket for your order. Our team will respond shortly.
+                  We&apos;ve created a support ticket for your order. Our team will respond shortly.
                 </p>
               </div>
             ) : (

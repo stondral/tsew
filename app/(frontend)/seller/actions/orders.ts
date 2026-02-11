@@ -1,10 +1,21 @@
-"use server"
+"use server";
 
 import { acceptOrder } from "@/lib/orders";
 import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import type { ExtendedUser } from "@/lib/seller";
+
+interface OrderItem {
+  productName: string;
+  productImage?: {
+    id: string;
+    url: string;
+    alt?: string;
+  };
+  quantity: number;
+}
 
 export async function acceptOrderAction(
   orderId: string, 
@@ -20,36 +31,44 @@ export async function acceptOrderAction(
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  if (!user || ((user as any).role !== 'seller' && (user as any).role !== 'admin')) {
+  if (!user || ((user as unknown as ExtendedUser).role !== 'seller' && (user as unknown as ExtendedUser).role !== 'admin')) {
     return { ok: false, error: "Unauthorized" };
   }
 
   try {
     let trackingId: string | undefined;
-    let carrierResponse: any;
+    let carrierResponse: unknown;
 
     if (deliveryData.provider === "Delhivery") {
        const { createShipment, schedulePickup } = await import("@/lib/delhivery");
        
        // 1. Fetch full data for manifestation
-       const order = await (payload as any).findByID({
+       const order = await payload.findByID({
          collection: "orders",
          id: orderId,
          depth: 1,
          overrideAccess: true,
-       });
+       }) as unknown as { 
+         id: string; 
+         orderNumber?: string; 
+         total: number; 
+         paymentMethod: string; 
+         paymentStatus: string; 
+         shippingAddress: string | { fullName?: string; name?: string; phoneNumber?: string; postalCode: string; addressLine1: string; addressLine2?: string; city: string; state: string };
+         items: Array<OrderItem>;
+       };
 
-       const warehouse = await (payload as any).findByID({
+       const warehouse = await payload.findByID({
          collection: "warehouses",
          id: deliveryData.pickupWarehouse,
          overrideAccess: true,
-       });
+       }) as unknown as { label: string; postalCode: string; phone?: string; address?: string; city?: string; email?: string };
 
-       const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await (payload as any).findByID({
+       const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await payload.findByID({
          collection: "addresses",
-         id: order.shippingAddress,
+         id: order.shippingAddress as string,
          overrideAccess: true,
-       });
+       }) as unknown as { fullName?: string; name?: string; phoneNumber?: string; postalCode: string; addressLine1: string; addressLine2?: string; city: string; state: string };
 
        if (!order || !warehouse || !address) {
          throw new Error("Missing order, warehouse, or address data for shipment creation");
@@ -75,7 +94,7 @@ export async function acceptOrderAction(
           
           const isCOD = order.paymentMethod === 'cod' && order.paymentStatus !== 'paid';
           
-          const payload = {
+          const shipmentPayload = {
             pickup_location: warehouse.label,
             origin: warehouse.postalCode, // Pincode for origin
             consignee: address.fullName || address.name || "Customer",
@@ -88,13 +107,13 @@ export async function acceptOrderAction(
             amount: isCOD ? String(order.total) : '0', // COD amount for collection
             cod_amount: isCOD ? String(order.total) : undefined, // Explicitly set cod_amount for COD orders
             weight: String(deliveryData.overrides?.gm || 500),
-            shipping_mode: (deliveryData.overrides?.md === 'S' ? 'Surface' : 'Express') as any,
-            products_desc: order.items.map((i: any) => `${i.productName} (x${i.quantity})`).join(", "),
+            shipping_mode: (deliveryData.overrides?.md === 'S' ? 'Surface' : 'Express') as "Surface" | "Express",
+            products_desc: order.items.map((i: OrderItem) => `${i.productName} (x${i.quantity})`).join(", "),
             dimensions: dims,
             client: "STOND EMPORIUM"
           };
           
-          return payload;
+          return shipmentPayload;
         };
 
         const finalPayload = getShipmentPayload();
@@ -202,15 +221,15 @@ export async function acceptOrderAction(
     await acceptOrder(orderId, user.id, {
       ...deliveryData,
       trackingId,
-      carrierResponse
+      carrierResponse: carrierResponse as Record<string, unknown>
     });
 
     revalidatePath("/seller/orders/incoming");
     return { ok: true, trackingId };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to accept order:", error);
-    return { ok: false, error: error.message || "Failed to accept order" };
+    return { ok: false, error: error instanceof Error ? error.message : "Failed to accept order" };
   }
 }
 
@@ -223,43 +242,43 @@ export async function getDelhiveryStatsAction(
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  if (!user || ((user as any).role !== 'seller' && (user as any).role !== 'admin')) {
+  if (!user || ((user as unknown as ExtendedUser).role !== 'seller' && (user as unknown as ExtendedUser).role !== 'admin')) {
     return { ok: false, error: "Unauthorized" };
   }
 
   try {
-    const order = await (payload as any).findByID({
+    const order = await payload.findByID({
       collection: "orders",
       id: orderId,
       overrideAccess: true,
-    });
+    }) as unknown as { items: Array<{ productId: string; quantity: number }>; shippingAddress: string | Record<string, unknown>; paymentMethod: string; paymentStatus: string };
 
     if (!order) throw new Error("Order not found");
 
-    const warehouse = await (payload as any).findByID({
+    const warehouse = await payload.findByID({
       collection: "warehouses",
       id: warehouseId,
       overrideAccess: true,
-    });
+    }) as unknown as { postalCode: string };
 
     if (!warehouse) throw new Error("Warehouse not found");
 
-    const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await (payload as any).findByID({
+    const address = typeof order.shippingAddress === 'object' ? order.shippingAddress : await payload.findByID({
       collection: "addresses",
       id: order.shippingAddress,
       overrideAccess: true,
-    });
+    }) as unknown as { postalCode: string };
 
     if (!address) throw new Error("Shipping address not found");
 
     // Calculate total weight (default to 500g per item if missing)
     let calculatedWeight = 0;
     for (const item of order.items) {
-      const product = await (payload as any).findByID({
+      const product = await payload.findByID({
         collection: "products",
         id: item.productId,
         overrideAccess: true,
-      });
+      }) as unknown as { weight?: number };
       calculatedWeight += (product?.weight || 500) * item.quantity;
     }
 
@@ -286,23 +305,25 @@ export async function getDelhiveryStatsAction(
     const { getExpectedTAT, calculateShippingCost } = await import("@/lib/delhivery");
 
     const tat = await getExpectedTAT({
-      origin_pin: warehouse.postalCode,
-      destination_pin: address.postalCode,
+      origin_pin: String(warehouse.postalCode),
+      destination_pin: String(address.postalCode),
       weight: totalWeight, // Added weight
       mot: movementType === 'E' ? 'E' : 'S'
-    });
+    }) as unknown as { data: Array<{ expected_delivery_date: string }> };
 
-    const cost = await calculateShippingCost({
+    const costResult = await calculateShippingCost({
       md: movementType,
       gm: totalWeight,
-      o_pincode: warehouse.postalCode,
-      d_pincode: address.postalCode,
+      o_pincode: String(warehouse.postalCode),
+      d_pincode: String(address.postalCode),
       ss: 'Delivered',
       pt: (order.paymentMethod === 'cod' && order.paymentStatus !== 'paid') ? 'COD' : 'Pre-paid',
       l: finalL,
       b: finalB,
       h: finalH
     });
+
+    const cost = costResult as unknown as Array<Record<string, unknown>> | Record<string, unknown>;
 
     console.log("Delhivery Stats Request Params:", {
       o_pincode: warehouse.postalCode,
@@ -315,8 +336,8 @@ export async function getDelhiveryStatsAction(
 
     console.log("Delhivery RAW response:", JSON.stringify(cost, null, 2));
 
-    const delhiveryData = Array.isArray(cost) ? cost[0] : cost;
-    const shippingCost = delhiveryData?.total_amount ?? delhiveryData?.gross_amount ?? delhiveryData?.shipping_cost ?? 0;
+    const delhiveryData = Array.isArray(cost) ? cost[0] : cost as Record<string, unknown>;
+    const shippingCost = (delhiveryData?.total_amount as number) ?? (delhiveryData?.gross_amount as number) ?? (delhiveryData?.shipping_cost as number) ?? 0;
 
     if (shippingCost === 0) {
       console.warn("Delhivery returned ₹0 cost. Request parameters summary:", {
@@ -351,8 +372,103 @@ export async function getDelhiveryStatsAction(
         totalWeight
       } 
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to fetch Delhivery stats:", error);
-    return { ok: false, error: error.message || "Failed to fetch delivery stats" };
+    return { ok: false, error: error instanceof Error ? error.message : "Failed to fetch delivery stats" };
+  }
+}
+
+export async function updateOrderAddressAction(orderId: string, data: { 
+  firstName: string; 
+  lastName: string; 
+  phone: string; 
+  address: string; 
+  apartment?: string; 
+  city: string; 
+  state: string; 
+  postalCode: string; 
+}) {
+  const payload = await getPayload({ config });
+  const requestHeaders = await headers();
+  const { user } = await payload.auth({ headers: requestHeaders });
+
+  if (!user || ((user as unknown as ExtendedUser).role !== 'seller' && (user as unknown as ExtendedUser).role !== 'admin')) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  try {
+    const order = await payload.findByID({
+      collection: "orders",
+      id: orderId,
+      depth: 0,
+    }) as unknown as { status: string; shippingAddress: string };
+
+    if (!order) {
+      return { ok: false, error: "Order not found" };
+    }
+
+    // Allow updates only if not shipped yet
+    const restrictedStatuses = ['SHIPPED', 'DELIVERED', 'CANCELLED'];
+    if (restrictedStatuses.includes(order.status)) {
+      return { ok: false, error: `Address cannot be updated for orders with status: ${order.status}` };
+    }
+
+    if (typeof order.shippingAddress === 'string') {
+      await payload.update({
+        collection: "addresses",
+        id: order.shippingAddress,
+        data: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.phone,
+          addressLine1: data.address,
+          addressLine2: data.apartment || "",
+          city: data.city,
+          state: data.state,
+          postalCode: data.postalCode,
+        },
+      });
+    } else {
+      return { ok: false, error: "Invalid address reference on order" };
+    }
+
+    revalidatePath(`/seller/orders/${orderId}`);
+    return { ok: true };
+  } catch (error: unknown) {
+    console.error("Failed to update order address:", error);
+    return { ok: false, error: error instanceof Error ? error.message : "Failed to update address" };
+  }
+}
+
+export async function searchOrderAction(query: string) {
+  const payload = await getPayload({ config });
+  const requestHeaders = await headers();
+  const { user } = await payload.auth({ headers: requestHeaders });
+
+  if (!user || ((user as unknown as ExtendedUser).role !== 'seller' && (user as unknown as ExtendedUser).role !== 'admin')) {
+    return { ok: false, error: "Unauthorized" };
+  }
+
+  try {
+    const orders = await payload.find({
+      collection: "orders",
+      where: {
+        or: [
+          { orderNumber: { equals: query } },
+          { id: { equals: query } }
+        ]
+      },
+      limit: 1,
+      depth: 0,
+    });
+
+    if (orders.docs.length > 0) {
+      return { ok: true, id: orders.docs[0].id };
+    }
+
+    return { ok: false, error: "Order not found" };
+  } catch (error: unknown) {
+    console.error("Order search failed:", error);
+    return { ok: false, error: "Search failed" };
   }
 }

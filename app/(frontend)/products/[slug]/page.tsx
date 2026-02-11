@@ -24,9 +24,17 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${product.name} | Stondemporium`,
+    title: product.name,
     description: product.description?.slice(0, 160),
     openGraph: {
+      type: 'article',
+      siteName: 'Stondemporium',
+      title: product.name,
+      description: product.description?.slice(0, 160),
+      images: product.images?.[0] ? [resolveMediaUrl(product.images[0])] : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
       title: product.name,
       description: product.description?.slice(0, 160),
       images: product.images?.[0] ? [resolveMediaUrl(product.images[0])] : [],

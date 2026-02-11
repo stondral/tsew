@@ -7,8 +7,28 @@ import ProductList from "@/components/products/ProductList";
 import ProductSkeleton from "@/components/products/ProductSkeleton";
 import Link from "next/link";
 import { Suspense } from "react";
+import { Metadata } from "next";
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const { q, category } = await searchParams;
+  
+  let title = "Explore Products | Stondemporium";
+  let description = "Browse our extensive collection of premium products at Stondemporium.";
+
+  if (category) {
+    title = `${category.charAt(0).toUpperCase() + category.slice(1)} Products | Stondemporium`;
+    description = `Find the best ${category} items in our gallery. Curated for quality and style.`;
+  }
+
+  if (q) {
+    title = `Search results for "${q}" | Stondemporium`;
+    description = `Discover ${q} and more at Stondemporium. Search our marketplace for top-tier innovations.`;
+  }
+
+  return { title, description };
+}
 
 interface PageProps {
   searchParams: Promise<{ 

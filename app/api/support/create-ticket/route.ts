@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       const payloadInstance = await getPayload({ config });
 
       // Create support ticket
-      const ticket = await (payloadInstance as any).create({
+      const ticket = await payloadInstance.create({
         collection: 'support-tickets',
         data: {
           customer: userId,
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Ticket created with ID: ${ticket.id}`);
 
       // Create initial message
-      await (payloadInstance as any).create({
+      await payloadInstance.create({
         collection: 'support-messages',
         data: {
           ticket: ticket.id,

@@ -178,7 +178,7 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
     
     try {
       data = JSON.parse(responseText);
-    } catch (e) {
+    } catch {
       // Try parsing XML response for Delhivery's native format
       console.warn("Non-JSON response from warehouse registration, attempting XML parsing");
       
@@ -270,7 +270,7 @@ export async function createShipment(params: DelhiveryShipmentParams) {
   
   // Build shipment object according to official Delhivery API documentation
   // See: https://one.delhivery.com/developer-portal/document/b2c/detail/order-creation
-  const shipment: any = {
+  const shipment: Record<string, string | number | undefined> = {
     name: params.name,
     order: params.order,
     phone: params.phone,
@@ -296,7 +296,7 @@ export async function createShipment(params: DelhiveryShipmentParams) {
   }
   
   // Handle COD payment specifics
-  if (params.payment_mode === 'COD' || params.payment_mode === 'COD') {
+  if (params.payment_mode === 'COD') {
     if (params.amount && params.amount !== '0') {
       shipment.cod_amount = params.amount;
     }
@@ -460,6 +460,35 @@ export async function schedulePickup(params: { pickup_location: string, pickup_d
     return await response.json();
   } catch (error) {
     console.error("Delhivery Pickup scheduling failed:", error);
+    return null;
+  }
+}
+
+export async function trackShipment(params: { waybill: string }) {
+  const url = new URL(`${DELHIVERY_API_URL}/api/v1/packages/json/`);
+  url.searchParams.append("waybill", params.waybill);
+
+  console.log("🔍 Tracking shipment via Delhivery API:", params.waybill);
+
+  try {
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${DELHIVERY_TOKEN}`,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Delhivery Tracking API error (${response.status}): ${errorText}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Delhivery Tracking fetch failed:", error);
     return null;
   }
 }
