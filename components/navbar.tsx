@@ -164,9 +164,9 @@ export default function Navbar() {
                     `/products?q=${encodeURIComponent(q.toString())}`,
                   );
               }}
-              className="relative w-full flex items-center pt-3"
+              className="relative w-full flex items-center"
             >
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-5 text-muted-foreground z-10 pt-3" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
 
               <Input
                 name="q"

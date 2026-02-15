@@ -16,8 +16,7 @@ export async function GET(request: NextRequest) {
     const payload = await getPayload({ config });
     const { user } = await payload.auth({ headers: request.headers });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!user || (user as any).role !== 'admin') {
+    if (!user || (typeof user === 'object' && 'role' in user && user.role !== 'admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
