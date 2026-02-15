@@ -221,6 +221,8 @@ export default function ProductDetailClient({
                       fill
                       className="object-contain p-4"
                       sizes="(max-width: 768px) 100vw, 50vw"
+                      quality={75}
+                      loading={i === 0 ? "eager" : "lazy"}
                       priority={i === 0}
                     />
                   </div>
@@ -294,6 +296,8 @@ export default function ProductDetailClient({
                       fill
                       className="object-cover"
                       sizes="80px"
+                      quality={50}
+                      loading="lazy"
                     />
                   </button>
                 ))}
@@ -671,6 +675,8 @@ export default function ProductDetailClient({
                   alt={product.name}
                   fill
                   className="object-contain"
+                  quality={85}
+                  loading="lazy"
                 />
               </div>
             </motion.div>
@@ -685,7 +691,7 @@ export default function ProductDetailClient({
                     i === selectedImageIndex ? "border-orange-500 scale-110 shadow-lg shadow-orange-500/20" : "border-white/10 opacity-40 hover:opacity-100 hover:border-white/30"
                   )}
                 >
-                  <Image src={img} alt="thumb" fill className="object-cover"  />
+                  <Image src={img} alt="thumb" fill className="object-cover" quality={50} loading="lazy" />
                 </button>
               ))}
             </div>

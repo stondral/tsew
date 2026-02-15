@@ -19,9 +19,14 @@ interface Props {
   };
   view?: "grid" | "list";
   priority?: boolean;
+  imageProps?: {
+    loading?: "eager" | "lazy";
+    quality?: number;
+    sizes?: string;
+  };
 }
 
-export default function ProductCard({ product, view = "grid", priority = false }: Props) {
+export default function ProductCard({ product, view = "grid", priority = false, imageProps }: Props) {
   const { isWishlisted, toggleWishlist } = useWishlist();
   const wishlisted = isWishlisted(product.id);
   
@@ -70,7 +75,9 @@ export default function ProductCard({ product, view = "grid", priority = false }
                   alt={`${product.name} - image ${i + 1}`}
                   fill
                   className="object-cover"
-                  sizes={isList ? "(max-width: 640px) 128px, 192px" : "(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"}
+                  sizes={imageProps?.sizes || (isList ? "(max-width: 640px) 128px, 192px" : "(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw")}
+                  quality={imageProps?.quality || 75}
+                  loading={imageProps?.loading || (priority && i === 0 ? "eager" : "lazy")}
                   priority={priority && i === 0}
                 />
               </Link>

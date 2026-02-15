@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // ISR with 60-second revalidation
 export const runtime = 'nodejs';
 
 // Use localhost in development, but allow production URL override
@@ -84,8 +84,9 @@ export default async function HomePage() {
         const theme = resolveTheme(seller.theme, capabilities);
 
         // Fetch seller products via API
-        const productsRes = await fetch(`${SITE_URL}/api/products?type=seller&sellerId=${seller.id}&limit=16`, {
-          cache: 'no-store',
+        const productsRes = await fetch(`${SITE_URL}/api/products?type=seller&sellerId=${seller.id}&limit=8`, {
+          cache: 'force-cache',
+          next: { revalidate: 60 },
           headers: {
             'Content-Type': 'application/json',
           },
@@ -111,9 +112,9 @@ export default async function HomePage() {
   // PLATFORM DEFAULT - Fetch featured products via API
   try {
     // Use relative URL for server-side fetch to ensure it hits the same server (dev or prod)
-    const productsRes = await fetch(`${SITE_URL}/api/products?type=featured&limit=16&t=${Date.now()}`, {
-      cache: 'no-store',
-      next: { revalidate: 0 },
+    const productsRes = await fetch(`${SITE_URL}/api/products?type=featured&limit=8`, {
+      cache: 'force-cache',
+      next: { revalidate: 60 },
       headers: {
         'Content-Type': 'application/json',
       },

@@ -4,7 +4,7 @@ import { AuthProvider } from "@/components/auth/AuthContext";
 import { CartProvider } from "@/components/cart/CartContext";
 import { WishlistProvider } from "@/components/products/WishlistContext";
 import ConditionalLayout from "@/app/(frontend)/conditional-layout";
-import { ChatButton } from "@/components/support/ChatButton";
+import LazyChatButton from "@/components/support/LazyChatButton";
 import { getServerCart } from "@/lib/cart/server";
 
 interface LayoutProps {
@@ -24,7 +24,7 @@ const Layout = async ({ children }: LayoutProps) => {
               {children}
             </ConditionalLayout>
           </div>
-          <ChatButton />
+          <LazyChatButton />
         </CartProvider>
       </WishlistProvider>
     </AuthProvider>

@@ -121,6 +121,16 @@ export default function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        {/* Preload critical fonts */}
+        <link
+          rel="preload"
+          href="/fonts/inter-var.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <Script
           id="organization-schema"
