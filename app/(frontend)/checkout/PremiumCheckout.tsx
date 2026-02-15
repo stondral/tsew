@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import Image from "next/image";
 import {
   CreditCard,
@@ -327,7 +328,12 @@ export default function PremiumCheckout({
   };
 
   return (
-    <div className="min-h-screen">
+    <>
+      <Script 
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="lazyOnload"
+      />
+      <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-12">
         <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent mb-6 md:mb-8">
             Secure Checkout
@@ -793,5 +799,6 @@ export default function PremiumCheckout({
         </div>
       </div>
     </div>
+    </>
   );
 }

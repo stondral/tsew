@@ -1,6 +1,4 @@
-import redis, { safeRedisOperation } from './client';
-import { RedisKeys } from './keys';
-import { REDIS_CONFIG } from './config';
+import redis from './client';
 import type { RedisMetrics } from './types';
 
 /**

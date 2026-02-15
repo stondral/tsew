@@ -18,10 +18,16 @@ import { useAuth } from "@/components/auth/AuthContext";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
-  const [cart, setCart] = useState<CartClient>({ items: [] });
+export function CartProvider({ 
+  children,
+  initialCart 
+}: { 
+  children: ReactNode;
+  initialCart?: CartClient;
+}) {
+  const [cart, setCart] = useState<CartClient>(initialCart || { items: [] });
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialCart);
   const { isAuthenticated } = useAuth();
   
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -30,6 +36,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Load cart on mount or when auth status changes
   useEffect(() => {
     async function initializeCart() {
+      // If we have initialCart from server, skip fetch
+      if (initialCart) {
+        console.log("🛒 Using server-provided cart");
+        setIsLoading(false);
+        isMountedRef.current = true;
+        return;
+      }
+      
       console.log("🛒 Initializing cart, authenticated:", isAuthenticated);
 
       if (isAuthenticated) {
@@ -62,7 +76,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     initializeCart();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, initialCart]);
 
   // Debounced sync to database
   const debouncedSyncToDB = useCallback((cartToSync: CartClient) => {

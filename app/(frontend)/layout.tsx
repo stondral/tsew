@@ -4,29 +4,27 @@ import { AuthProvider } from "@/components/auth/AuthContext";
 import { CartProvider } from "@/components/cart/CartContext";
 import { WishlistProvider } from "@/components/products/WishlistContext";
 import ConditionalLayout from "@/app/(frontend)/conditional-layout";
+import { ChatButton } from "@/components/support/ChatButton";
+import { getServerCart } from "@/lib/cart/server";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-import Script from "next/script";
-import { ChatButton } from "@/components/support/ChatButton";
-
-const Layout = ({ children }: LayoutProps) => {
+const Layout = async ({ children }: LayoutProps) => {
+  // Fetch cart on server to avoid client-side API call
+  const initialCart = await getServerCart();
+  
   return (
     <AuthProvider>
       <WishlistProvider>
-        <CartProvider>
+        <CartProvider initialCart={initialCart}>
           <div className="relative z-0 flex flex-col min-h-screen bg-background">
             <ConditionalLayout>
               {children}
             </ConditionalLayout>
           </div>
           <ChatButton />
-          <Script 
-            src="https://checkout.razorpay.com/v1/checkout.js"
-            strategy="afterInteractive"
-          />
         </CartProvider>
       </WishlistProvider>
     </AuthProvider>

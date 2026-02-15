@@ -50,15 +50,6 @@ interface OrderItem {
   quantity: number;
 }
 
-interface OrderRecord {
-  id: string;
-  orderNumber: string;
-  status: string;
-  createdAt: string;
-  total: number;
-  items: OrderItem[];
-}
-
 export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClientProps) {
   const [tickets, setTickets] = useState(initialTickets);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);

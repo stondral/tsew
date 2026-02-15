@@ -224,7 +224,7 @@ export async function isInWishlist(
  */
 async function syncWishlistToDB(
   userId: string,
-  wishlist: RedisWishlist
+  _wishlist: RedisWishlist
 ): Promise<void> {
   // This will be called from API routes with access to Payload
   // For now, just log the sync intention

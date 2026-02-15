@@ -1,11 +1,21 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { cache } from "react";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // Revalidate every hour
 
 import ProductDetailClient from "@/components/products/ProductDetailClient";
 import { resolveMediaUrl } from "@/lib/media";
 import { getProductBySlug } from "@/lib/models/domain/getProductBySlug";
+import { getReviews } from "@/app/(frontend)/products/actions/reviews";
+
+// Memoize product fetch to prevent duplicate queries in metadata + page render
+const getCachedProduct = cache(async (slug: string) => {
+  console.time(`[PERF] Product fetch: ${slug}`);
+  const product = await getProductBySlug(slug);
+  console.timeEnd(`[PERF] Product fetch: ${slug}`);
+  return product;
+});
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -15,7 +25,7 @@ export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const product = await getCachedProduct(slug);
 
   if (!product) {
     return {
@@ -92,7 +102,12 @@ export async function generateMetadata({
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
 
-  const product = await getProductBySlug(slug);
+  // Fetch product and reviews in parallel on server
+  const [product, reviewsData] = await Promise.all([
+    getCachedProduct(slug),
+    getCachedProduct(slug).then(p => p ? getReviews(p.id) : { success: false, reviews: [] })
+  ]);
+  
   if (!product) notFound();
 
   const images = (product.images ?? []).map((src) => resolveMediaUrl(src));
@@ -182,7 +197,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
           __html: JSON.stringify(breadcrumbSchema)
         }}
       />
-      <ProductDetailClient product={product} images={images} />
+      <ProductDetailClient 
+        product={product} 
+        images={images}
+        initialReviews={reviewsData.success ? reviewsData.reviews : []}
+      />
     </>
   );
 }

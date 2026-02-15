@@ -18,7 +18,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-import { Product } from "@/lib/models/domain/product";
+import { Product, Review } from "@/lib/models/domain";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -43,12 +43,14 @@ import { useRouter } from "next/navigation";
 interface ProductDetailClientProps {
   product: Product;
   images: string[];
+  initialReviews?: Review[];
 }
 
 
 export default function ProductDetailClient({
   product,
   images,
+  initialReviews = [],
 }: ProductDetailClientProps) {
   const router = useRouter();
   const { addToCart } = useCart();
@@ -218,6 +220,7 @@ export default function ProductDetailClient({
                       alt={`${product.name} ${i + 1}`}
                       fill
                       className="object-contain p-4"
+                      sizes="(max-width: 768px) 100vw, 50vw"
                       priority={i === 0}
                     />
                   </div>
@@ -290,6 +293,7 @@ export default function ProductDetailClient({
                       alt={`${product.name} thumbnail ${i + 1}`}
                       fill
                       className="object-cover"
+                      sizes="80px"
                     />
                   </button>
                 ))}
@@ -581,7 +585,7 @@ export default function ProductDetailClient({
               </h2>
             </div>
             <div className="px-4 md:px-6 py-4 md:py-6">
-              <ReviewSection productId={product.id} />
+              <ReviewSection productId={product.id} initialReviews={initialReviews} />
             </div>
           </div>
 

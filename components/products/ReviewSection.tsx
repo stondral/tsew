@@ -10,18 +10,19 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { RefreshCcw } from "lucide-react";
+import { Review } from "@/lib/models/domain";
 
 interface ReviewSectionProps {
   productId: string;
+  initialReviews?: Review[];
 }
 
-export default function ReviewSection({ productId }: ReviewSectionProps) {
+export default function ReviewSection({ productId, initialReviews = [] }: ReviewSectionProps) {
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [canReview, setCanReview] = useState(false);
   const [userContext, setUserContext] = useState<{ userId: string | null; role: string | null }>({ userId: null, role: null });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialReviews.length);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -46,20 +47,29 @@ export default function ReviewSection({ productId }: ReviewSectionProps) {
   }, [productId, router]);
 
   useEffect(() => {
-    fetchReviews();
-  }, [fetchReviews]);
+    // If we have initial reviews from server, only fetch user context
+    if (initialReviews.length > 0) {
+      checkCanReview(productId).then(res => {
+        setCanReview(res.canReview);
+        setUserContext({ userId: res.userId || null, role: res.role || null });
+        setLoading(false);
+      });
+    } else {
+      // Otherwise fetch everything
+      fetchReviews();
+    }
+  }, [fetchReviews, productId, initialReviews]);
 
   const handleSync = async () => {
     const promise = syncAllProductRatings();
     toast.promise(promise, {
       loading: "Syncing all product ratings...",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      success: (res: any) => {
+      success: (res: { success: boolean; count?: number; error?: string }) => {
         if (res.success) {
           fetchReviews();
           return `Successfully synced ${res.count} products!`;
         }
-        throw new Error(res.error);
+        throw new Error(res.error || 'Sync failed');
       },
       error: (err) => `Sync failed: ${err.message}`,
     });
