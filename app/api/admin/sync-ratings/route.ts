@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
         overrideAccess: true,
       });
 
-      console.log(`🔄 Syncing ${products.totalDocs} products...`);
+      logger.info({ productCount: products.totalDocs }, "🔄 Syncing product ratings");
       const logs: string[] = [];
       const results = [];
 
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
             averageRating: finalAvg,
           });
         } catch (err: unknown) {
-          console.error(`Error syncing product ${product.id}:`, err);
+          logger.error({ err, productId: product.id }, "Error syncing product");
           logs.push(`❌ Error syncing ${product.name}: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
       }
@@ -87,11 +88,11 @@ export async function GET(request: NextRequest) {
       revalidatePath('/');
       revalidatePath('/products');
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         synced: results.length,
         logs,
-        products: results 
+        products: results
       });
     }
 
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error: unknown) {
-    console.error('Debug API error:', error);
+    logger.error({ err: error }, 'Debug API error');
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

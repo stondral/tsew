@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 export const R2_URL = "https://5d24be3406adc0ad4610405062859db9.r2.cloudflarestorage.com"
 
 const getSiteUrl = () => {
@@ -13,13 +15,13 @@ export const PLACEHOLDER = "/placeholder.png";
 
 export function resolveMediaUrl(input?: unknown): string {
   const SITE_URL = getSiteUrl();
-  console.log("🔍 resolveMediaUrl [Origin: " + SITE_URL + "] input:", input);
-  
+  logger.debug({ input, siteUrl: SITE_URL }, "🔍 resolveMediaUrl input");
+
   // 🚫 No input → no image
   if (!input) {
     return PLACEHOLDER;
   }
-  
+
   // Extract URL from object or string
   let url: string;
   if (typeof input === "object" && input !== null && "url" in input && typeof (input as { url: unknown }).url === "string") {
@@ -29,7 +31,7 @@ export function resolveMediaUrl(input?: unknown): string {
   } else {
     return PLACEHOLDER;
   }
-  
+
   // 🚨 Reject screenshot-style filenames (spaces, no path)
   if (!url.includes("/") && url.toLowerCase().includes("screenshot")) {
     return PLACEHOLDER;
@@ -43,14 +45,14 @@ export function resolveMediaUrl(input?: unknown): string {
   // 0️⃣ Handle localhost replacement for network access
   if (url.includes("localhost:3000") && !SITE_URL.includes("localhost")) {
     url = url.replace("http://localhost:3000", SITE_URL);
-    console.log("🔄 Replaced localhost with current site URL:", url);
+    logger.debug({ url }, "🔄 Replaced localhost with current site URL");
   }
 
   // 1️⃣ Absolute URLs → trust it (now potentially updated)
   if (/^https?:\/\//.test(url)) {
     return url;
   }
-  
+
   // 2️⃣ Payload API media routes → Convert to direct media URLs
   if (url.startsWith("/api/media/file/") || url.startsWith("api/media/file/")) {
     const filename = url.split("/").pop() || "";
@@ -58,26 +60,26 @@ export function resolveMediaUrl(input?: unknown): string {
       return PLACEHOLDER;
     }
     const mediaUrl = `${SITE_URL}/media/${filename}`;
-    console.log("🪣 Payload API route to media URL:", { original: url, mediaUrl });
+    logger.debug({ original: url, mediaUrl }, "🪣 Payload API route to media URL");
     return mediaUrl;
   }
 
   // 3️⃣ Static media routes
   if (url.startsWith("/media/")) {
     const finalUrl = `${SITE_URL}${url}`;
-    console.log("✅ Static media route:", finalUrl);
+    logger.debug({ finalUrl }, "✅ Static media route");
     return finalUrl;
   }
 
   // 4️⃣ Root-relative filenames → /media/filename
   if (url.startsWith("/")) {
     const finalUrl = `${SITE_URL}/media${url}`;
-    console.log("✅ Root-relative filename:", finalUrl);
+    logger.debug({ finalUrl }, "✅ Root-relative filename");
     return finalUrl;
   }
 
   // 5️⃣ Bare filename fallback → /media/filename
   const finalUrl = `${SITE_URL}/media/${url}`;
-  console.log("✅ Bare filename fallback:", finalUrl);
+  logger.debug({ finalUrl }, "✅ Bare filename fallback");
   return finalUrl;
 }

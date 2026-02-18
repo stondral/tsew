@@ -1,7 +1,8 @@
 "use server"
 
 import { getPayload } from "payload"
-import config from "@/payload.config"
+import config from "@/payload.config";
+import { logger } from "@/lib/logger";
 
 export interface RazorpayPaymentData {
   razorpay_payment_id: string
@@ -20,7 +21,7 @@ export const handleRazorpayPayment = async (
   const payload = await getPayload({ config })
 
   // 🔐 TODO: Implement real Razorpay signature verification here
-  console.log("Verifying Razorpay payment:", orderData)
+  logger.debug({ orderData }, "Verifying Razorpay payment");
 
   // Casting to any because the generated types are outdated and missing the 'orders' collection
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

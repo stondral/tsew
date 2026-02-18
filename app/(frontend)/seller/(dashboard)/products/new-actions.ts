@@ -4,6 +4,7 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { logger } from "@/lib/logger";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createProductAction(data: any) {
@@ -106,7 +107,7 @@ export async function createProductAction(data: any) {
         });
       }
     } catch (emailErr) {
-      console.error("Failed to notify admins of product submission:", emailErr);
+      logger.error({ err: emailErr }, "Failed to notify admins of product submission");
     }
 
     // Send confirmation email to seller
@@ -127,14 +128,14 @@ export async function createProductAction(data: any) {
         html: sellerEmailHtml,
       });
     } catch (sellerEmailErr) {
-      console.error("Failed to send seller confirmation email:", sellerEmailErr);
+      logger.error({ err: sellerEmailErr }, "Failed to send seller confirmation email");
     }
 
     revalidatePath("/seller/products");
 
     return { success: true, product };
   } catch (err: unknown) {
-    console.error("Critical error in createProductAction:", err);
+    logger.error({ err }, "Critical error in createProductAction");
     return { success: false, error: (err as Error).message || "Failed to create product" };
   }
 }
@@ -202,7 +203,7 @@ export async function updateProductAction(id: string, data: any) {
 
     return { success: true, product: updatedProduct };
   } catch (err: unknown) {
-    console.error("Critical error in updateProductAction:", err);
+    logger.error({ err }, "Critical error in updateProductAction");
     return { success: false, error: (err as Error).message || "Failed to update product" };
   }
 }

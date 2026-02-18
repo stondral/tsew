@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 import { mapPayloadProductToDomain } from '@/lib/products';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,10 +40,10 @@ export async function GET(request: NextRequest) {
     // Transform the data using shared mapper
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const products = data?.docs?.map((p: any) => mapPayloadProductToDomain(p)) ?? [];
-    
+
     return NextResponse.json({ products });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logger.error({ err: error, type, sellerId }, 'Error fetching products');
     return NextResponse.json(
       { error: 'Failed to fetch products' },
       { status: 500 }

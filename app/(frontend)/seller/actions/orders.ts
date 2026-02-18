@@ -363,7 +363,6 @@ export async function searchOrderAction(query: string) {
   const requestHeaders = await headers();
   const { user } = await payload.auth({ headers: requestHeaders });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   if (!user || (user.role !== 'seller' && user.role !== 'admin' && user.role !== 'sellerEmployee')) {
     return { ok: false, error: "Unauthorized" };
   }
@@ -383,7 +382,6 @@ export async function searchOrderAction(query: string) {
     }
 
     return { ok: false, error: "Order not found" };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error) {
     console.error("Failed to search order:", error);
     return { ok: false, error: (error as Error).message || "Search failed" };

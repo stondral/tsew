@@ -2,6 +2,7 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -15,12 +16,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { 
-      orderId, 
-      status, 
-      paymentStatus, 
-      shippingAddress, 
-      pickupWarehouse 
+    const {
+      orderId,
+      status,
+      paymentStatus,
+      shippingAddress,
+      pickupWarehouse
     } = body;
 
     if (!orderId) {
@@ -76,14 +77,14 @@ export async function POST(req: Request) {
       overrideAccess: true,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Order Master updated successfully",
-      order: updatedOrder 
+      order: updatedOrder
     });
 
-  } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-    console.error("Master Update Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    logger.error({ err: error }, "Master Update Error");
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

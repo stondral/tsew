@@ -4,6 +4,7 @@ import config from "@/payload.config";
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { getCart } from "@/lib/redis/cart";
+import { logger } from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -26,12 +27,12 @@ export async function GET() {
   try {
     // Use Redis cart layer (automatic DB fallback)
     const items = await getCart(user.id);
-    
+
     return NextResponse.json({
       items: items || [],
     });
   } catch (e) {
-    console.error("Failed to fetch cart", e);
+    logger.error({ err: e, userId: user.id }, "Failed to fetch cart");
     return NextResponse.json({ error: "Failed to fetch cart" }, { status: 500 });
   }
 }
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
       cart: { items },
     });
   } catch (e) {
-    console.error("Failed to update cart", e);
+    logger.error({ err: e, userId: user.id }, "Failed to update cart");
     return NextResponse.json({ error: "Failed to update cart" }, { status: 500 });
   }
 }
@@ -107,7 +108,7 @@ export async function PUT(req: NextRequest) {
       cart: { items: mergedItems },
     });
   } catch (e) {
-    console.error("Failed to merge cart", e);
+    logger.error({ err: e, userId: user.id }, "Failed to merge cart");
     return NextResponse.json({ error: "Failed to merge cart" }, { status: 500 });
   }
 }

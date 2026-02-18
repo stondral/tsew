@@ -1,6 +1,7 @@
 import redis, { safeRedisOperation } from './client';
 import { RedisKeys } from './keys';
 import { REDIS_CONFIG } from './config';
+import { logger } from '../logger';
 
 /**
  * Rate Limiting Layer
@@ -48,7 +49,7 @@ export async function checkRateLimit(
 
   try {
     const key = RedisKeys.rateLimit(endpoint, identifier);
-    
+
     // Atomic increment
     const count = await redis.incr(key);
 
@@ -65,7 +66,7 @@ export async function checkRateLimit(
     const remaining = Math.max(0, finalLimit - count);
 
     if (!allowed) {
-      console.warn(`⚠️ Rate limit exceeded for ${endpoint}:${identifier} (${count}/${finalLimit})`);
+      logger.warn({ endpoint, identifier, count, limit: finalLimit }, "⚠️ Rate limit exceeded");
       return {
         allowed: false,
         remaining: 0,
@@ -80,7 +81,7 @@ export async function checkRateLimit(
       resetAt,
     };
   } catch (error) {
-    console.error('Rate limit check failed, allowing request:', error);
+    logger.error({ err: error, endpoint, identifier }, 'Rate limit check failed, allowing request');
     // Fail open - allow request if Redis is down
     return {
       allowed: true,
@@ -105,7 +106,7 @@ export async function resetRateLimit(
   const operation = async () => {
     const key = RedisKeys.rateLimit(endpoint, identifier);
     await redis.del(key);
-    console.log(`✅ Rate limit reset for ${endpoint}:${identifier}`);
+    logger.info({ endpoint, identifier }, "✅ Rate limit reset");
   };
 
   await safeRedisOperation(operation);
@@ -136,7 +137,7 @@ export async function getRateLimitInfo(
       ttl: ttl > 0 ? ttl : 0,
     };
   } catch (error) {
-    console.error('Failed to get rate limit info:', error);
+    logger.error({ err: error, endpoint, identifier }, 'Failed to get rate limit info');
     return null;
   }
 }

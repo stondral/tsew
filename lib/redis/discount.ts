@@ -1,6 +1,7 @@
 import redis, { safeRedisOperation } from './client';
 import { RedisKeys } from './keys';
 import { REDIS_CONFIG } from './config';
+import { logger } from '../logger';
 
 /**
  * Discount Code Caching Layer
@@ -59,7 +60,7 @@ export async function getDiscountCode(
   fetchFromDB: () => Promise<any>
 ): Promise<DiscountCode | null> {
   const upperCode = code.toUpperCase().trim();
-  
+
   try {
     const key = RedisKeys.discountCode(upperCode);
     const cached = await redis.get<DiscountCode>(key);
@@ -67,31 +68,31 @@ export async function getDiscountCode(
     if (cached) {
       // Verify it's still valid
       if (isDiscountValid(cached)) {
-        console.log(`✅ Discount code cache HIT: ${upperCode}`);
+        logger.debug({ upperCode }, "✅ Discount code cache HIT");
         return cached;
       } else {
         // Invalidate if no longer valid
         await redis.del(key);
-        console.log(`⚠️ Discount code expired/invalid, removed from cache: ${upperCode}`);
+        logger.info({ upperCode }, "⚠️ Discount code expired/invalid, removed from cache");
         return null;
       }
     }
 
-    console.log(`⚠️ Discount code cache MISS: ${upperCode}`);
-    
+    logger.debug({ upperCode }, "⚠️ Discount code cache MISS");
+
     // Fetch from DB
     const discount = await fetchFromDB();
-    
+
     if (discount && isDiscountValid(discount)) {
       // Cache for 1 hour
       await redis.setex(key, REDIS_CONFIG.TTL.DISCOUNT_CODE, discount);
-      console.log(`✅ Discount code cached: ${upperCode}`);
+      logger.debug({ upperCode }, "✅ Discount code cached");
       return discount;
     }
-    
+
     return null;
   } catch (error) {
-    console.error('Redis getDiscountCode error, falling back to DB:', error);
+    logger.error({ err: error, upperCode }, 'Redis getDiscountCode error, falling back to DB');
     const discount = await fetchFromDB();
     return discount && isDiscountValid(discount) ? discount : null;
   }
@@ -106,28 +107,28 @@ export async function incrementDiscountUsage(
   usageLimit?: number
 ): Promise<boolean> {
   const upperCode = code.toUpperCase().trim();
-  
+
   try {
     const key = `${RedisKeys.discountCode(upperCode)}:usage`;
-    
+
     // Atomic increment
     const newCount = await redis.incr(key);
-    
+
     // Set TTL on first use
     if (newCount === 1) {
       await redis.expire(key, REDIS_CONFIG.TTL.DISCOUNT_CODE);
     }
-    
+
     // Check if limit exceeded
     if (usageLimit && newCount > usageLimit) {
-      console.warn(`⚠️ Discount code usage limit exceeded: ${upperCode} (${newCount}/${usageLimit})`);
+      logger.warn({ upperCode, newCount, usageLimit }, "⚠️ Discount code usage limit exceeded");
       return false;
     }
-    
-    console.log(`✅ Discount code usage incremented: ${upperCode} (${newCount})`);
+
+    logger.info({ upperCode, newCount }, "✅ Discount code usage incremented");
     return true;
   } catch (error) {
-    console.error('Failed to increment discount usage:', error);
+    logger.error({ err: error, upperCode }, 'Failed to increment discount usage');
     // Fail open - allow the discount
     return true;
   }
@@ -138,13 +139,13 @@ export async function incrementDiscountUsage(
  */
 export async function getDiscountUsageCount(code: string): Promise<number> {
   const upperCode = code.toUpperCase().trim();
-  
+
   try {
     const key = `${RedisKeys.discountCode(upperCode)}:usage`;
     const count = await redis.get<number>(key);
     return count || 0;
   } catch (error) {
-    console.error('Failed to get discount usage count:', error);
+    logger.error({ err: error, upperCode }, 'Failed to get discount usage count');
     return 0;
   }
 }
@@ -155,15 +156,15 @@ export async function getDiscountUsageCount(code: string): Promise<number> {
  */
 export async function invalidateDiscountCode(code: string): Promise<void> {
   const upperCode = code.toUpperCase().trim();
-  
+
   const operation = async () => {
     const key = RedisKeys.discountCode(upperCode);
     const usageKey = `${key}:usage`;
-    
+
     await redis.del(key);
     await redis.del(usageKey);
-    
-    console.log(`✅ Discount code cache invalidated: ${upperCode}`);
+
+    logger.info({ upperCode }, "✅ Discount code cache invalidated");
   };
 
   await safeRedisOperation(operation);
@@ -175,11 +176,11 @@ export async function invalidateDiscountCode(code: string): Promise<void> {
  */
 export async function resetDiscountUsage(code: string): Promise<void> {
   const upperCode = code.toUpperCase().trim();
-  
+
   const operation = async () => {
     const usageKey = `${RedisKeys.discountCode(upperCode)}:usage`;
     await redis.del(usageKey);
-    console.log(`✅ Discount code usage reset: ${upperCode}`);
+    logger.info({ upperCode }, "✅ Discount code usage reset");
   };
 
   await safeRedisOperation(operation);

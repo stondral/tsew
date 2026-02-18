@@ -2,6 +2,7 @@ import redis, { safeRedisOperation } from './client';
 import { RedisKeys } from './keys';
 import { REDIS_CONFIG } from './config';
 import type { RedisProduct, RedisProductList } from './types';
+import { logger } from '../logger';
 
 /**
  * Product Caching Layer
@@ -33,21 +34,21 @@ export async function getProduct(
     const cached = await redis.get<RedisProduct>(key);
 
     if (cached) {
-      console.log(`✅ Product cache HIT for: ${productId}`);
+      logger.debug({ productId }, "✅ Product cache HIT");
       return cached;
     }
 
-    console.log(`⚠️ Product cache MISS for: ${productId}`);
+    logger.debug({ productId }, "⚠️ Product cache MISS");
     // Cache miss - fetch from DB and populate cache
     const product = await fetchFromDB();
-    
+
     if (product) {
       await setProduct(productId, product);
     }
-    
+
     return product;
   } catch (error) {
-    console.error('Redis getProduct error, falling back to DB:', error);
+    logger.error({ err: error, productId }, 'Redis getProduct error, falling back to DB');
     return await fetchFromDB();
   }
 }
@@ -81,7 +82,7 @@ export async function setProduct(
     };
 
     await redis.setex(key, REDIS_CONFIG.TTL.PRODUCT, redisProduct);
-    console.log(`✅ Product cached: ${productId}`);
+    logger.debug({ productId }, "✅ Product cached");
   };
 
   await safeRedisOperation(operation);
@@ -101,26 +102,26 @@ export async function getProductList(
     return fetchFromDB ? await fetchFromDB() : null;
   }
 
+  const key = RedisKeys.productList(category, page, filters);
   try {
-    const key = RedisKeys.productList(category, page, filters);
     const cached = await redis.get<RedisProductList>(key);
 
     if (cached) {
-      console.log(`✅ Product list cache HIT for: ${key}`);
+      logger.debug({ key }, "✅ Product list cache HIT");
       return cached;
     }
 
-    console.log(`⚠️ Product list cache MISS for: ${key}`);
+    logger.debug({ key }, "⚠️ Product list cache MISS");
     // Cache miss - fetch from DB and populate cache
     const result = await fetchFromDB();
-    
+
     if (result) {
       await setProductList(category, page, filters, result);
     }
-    
+
     return result;
   } catch (error) {
-    console.error('Redis getProductList error, falling back to DB:', error);
+    logger.error({ err: error, key }, 'Redis getProductList error, falling back to DB');
     return await fetchFromDB();
   }
 }
@@ -150,7 +151,7 @@ export async function setProductList(
     };
 
     await redis.setex(key, REDIS_CONFIG.TTL.PRODUCT_LIST, redisProductList);
-    console.log(`✅ Product list cached: ${key}`);
+    logger.debug({ key }, "✅ Product list cached");
   };
 
   await safeRedisOperation(operation);
@@ -168,7 +169,7 @@ export async function invalidateProduct(productId: string): Promise<void> {
   const operation = async () => {
     const key = RedisKeys.product(productId);
     await redis.del(key);
-    console.log(`✅ Product cache invalidated: ${productId}`);
+    logger.info({ productId }, "✅ Product cache invalidated");
   };
 
   await safeRedisOperation(operation);
@@ -184,11 +185,10 @@ export async function invalidateCategory(category: string): Promise<void> {
   }
 
   const operation = async () => {
-    // In a production environment, you'd use Redis SCAN to find all keys matching the pattern
-    // For now, we'll just log the invalidation
-    // Note: Upstash Redis REST API doesn't support SCAN, so we'd need to track keys separately
-    console.log(`✅ Category cache invalidation triggered: ${category}`);
-    
+    // Alternative: Store category keys in a Set and iterate
+    // This is a simplified version - in production, implement proper key tracking
+    logger.info({ category }, "✅ Category cache invalidation triggered");
+
     // Alternative: Store category keys in a Set and iterate
     // This is a simplified version - in production, implement proper key tracking
   };
@@ -207,8 +207,8 @@ export async function invalidateAllProducts(): Promise<void> {
 
   const operation = async () => {
     // In production, use SCAN to find all product:* keys
-    console.log(`⚠️ All product caches invalidation triggered`);
-    
+    logger.warn("⚠️ All product caches invalidation triggered");
+
     // Alternative: Use a separate tracking mechanism
     // For Upstash, consider using a Set to track all product keys
   };
@@ -227,6 +227,6 @@ export async function prefetchProduct(
 ): Promise<void> {
   // Don't await - fire and forget
   getProduct(productId, fetchFromDB).catch((err) =>
-    console.error('Prefetch failed:', err)
+    logger.error({ err }, 'Prefetch failed')
   );
 }

@@ -1,5 +1,6 @@
 import redis from './client';
 import type { RedisMetrics } from './types';
+import { logger } from '../logger';
 
 /**
  * Redis Monitoring Utilities
@@ -78,7 +79,7 @@ export async function checkConnectionHealth(): Promise<boolean> {
     metrics.lastChecked = new Date().toISOString();
     return result === 'PONG';
   } catch (error) {
-    console.error('Redis health check failed:', error);
+    logger.error({ err: error }, 'Redis health check failed');
     metrics.connectionStatus = 'disconnected';
     metrics.lastChecked = new Date().toISOString();
     return false;
@@ -95,7 +96,7 @@ export async function getMemoryUsage(): Promise<number> {
     // In production, use Upstash dashboard for memory monitoring
     return metrics.memoryUsage;
   } catch (error) {
-    console.error('Failed to get memory usage:', error);
+    logger.error({ err: error }, 'Failed to get memory usage');
     return 0;
   }
 }
@@ -111,7 +112,7 @@ export async function getCacheStats(): Promise<{
   connectionStatus: string;
 }> {
   await checkConnectionHealth();
-  
+
   return {
     hitRate: metrics.cacheHitRate,
     totalRequests: metrics.totalRequests,
@@ -125,13 +126,14 @@ export async function getCacheStats(): Promise<{
  * Log performance metrics
  */
 export function logMetrics(): void {
-  console.log('📊 Redis Performance Metrics:');
-  console.log(`   Cache Hit Rate: ${metrics.cacheHitRate.toFixed(2)}%`);
-  console.log(`   Total Requests: ${metrics.totalRequests}`);
-  console.log(`   Cache Hits: ${metrics.cacheHits}`);
-  console.log(`   Cache Misses: ${metrics.cacheMisses}`);
-  console.log(`   Connection Status: ${metrics.connectionStatus}`);
-  console.log(`   Last Checked: ${metrics.lastChecked}`);
+  logger.info({
+    hitRate: `${metrics.cacheHitRate.toFixed(2)}%`,
+    totalRequests: metrics.totalRequests,
+    cacheHits: metrics.cacheHits,
+    cacheMisses: metrics.cacheMisses,
+    connectionStatus: metrics.connectionStatus,
+    lastChecked: metrics.lastChecked
+  }, '📊 Redis Performance Metrics');
 }
 
 /**
@@ -139,14 +141,14 @@ export function logMetrics(): void {
  */
 export async function periodicHealthCheck(): Promise<void> {
   const isHealthy = await checkConnectionHealth();
-  
+
   if (!isHealthy) {
-    console.error('⚠️ Redis health check failed!');
+    logger.error('⚠️ Redis health check failed!');
     // In production, send alert to monitoring service
   } else {
-    console.log('✅ Redis health check passed');
+    logger.debug('✅ Redis health check passed');
   }
-  
+
   // Log metrics every hour
   if (metrics.totalRequests > 0) {
     logMetrics();

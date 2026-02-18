@@ -3,6 +3,7 @@ import { RedisKeys } from './keys';
 import { REDIS_CONFIG } from './config';
 import type { RedisShipping } from './types';
 import { createHash } from 'crypto';
+import { logger } from '../logger';
 
 /**
  * Shipping Cost Caching Layer
@@ -37,12 +38,11 @@ interface ShippingResult {
  * Generate cache key hash from shipping params
  */
 function generateShippingHash(params: ShippingParams): string {
-  const hashInput = `${params.origin}-${params.destination}-${params.weight}-${
-    params.dimensions
+  const hashInput = `${params.origin}-${params.destination}-${params.weight}-${params.dimensions
       ? `${params.dimensions.length}x${params.dimensions.width}x${params.dimensions.height}`
       : 'nodim'
-  }`;
-  
+    }`;
+
   return createHash('md5').update(hashInput).digest('hex');
 }
 
@@ -57,13 +57,13 @@ export async function getShippingCost(
     return await calculateFn();
   }
 
+  const hash = generateShippingHash(params);
   try {
-    const hash = generateShippingHash(params);
     const key = RedisKeys.shipping(hash);
     const cached = await redis.get<RedisShipping>(key);
 
     if (cached) {
-      console.log(`✅ Shipping cache HIT for: ${hash}`);
+      logger.debug({ hash }, "✅ Shipping cache HIT");
       return {
         cost: cached.cost,
         estimatedDays: cached.estimatedDays,
@@ -71,13 +71,13 @@ export async function getShippingCost(
       };
     }
 
-    console.log(`⚠️ Shipping cache MISS for: ${hash}`);
+    logger.debug({ hash }, "⚠️ Shipping cache MISS");
     // Cache miss - calculate and cache
     const result = await calculateFn();
     await cacheShippingCost(params, result);
     return result;
   } catch (error) {
-    console.error('Redis getShippingCost error, falling back to calculation:', error);
+    logger.error({ err: error, hash }, 'Redis getShippingCost error, falling back to calculation');
     return await calculateFn();
   }
 }
@@ -96,7 +96,7 @@ export async function cacheShippingCost(
   const operation = async () => {
     const hash = generateShippingHash(params);
     const key = RedisKeys.shipping(hash);
-    
+
     const redisShipping: RedisShipping = {
       cost: result.cost,
       estimatedDays: result.estimatedDays,
@@ -106,7 +106,7 @@ export async function cacheShippingCost(
     };
 
     await redis.setex(key, REDIS_CONFIG.TTL.SHIPPING, redisShipping);
-    console.log(`✅ Shipping cost cached: ${hash}`);
+    logger.debug({ hash }, "✅ Shipping cost cached");
   };
 
   await safeRedisOperation(operation);
@@ -125,7 +125,7 @@ export async function invalidateShippingCache(params: ShippingParams): Promise<v
     const hash = generateShippingHash(params);
     const key = RedisKeys.shipping(hash);
     await redis.del(key);
-    console.log(`✅ Shipping cache invalidated: ${hash}`);
+    logger.info({ hash }, "✅ Shipping cache invalidated");
   };
 
   await safeRedisOperation(operation);
@@ -142,7 +142,7 @@ export async function clearAllShippingCaches(): Promise<void> {
 
   const operation = async () => {
     // In production, use SCAN to find all shipping:* keys
-    console.log(`⚠️ All shipping caches cleared`);
+    logger.warn("⚠️ All shipping caches clear triggered");
   };
 
   await safeRedisOperation(operation);

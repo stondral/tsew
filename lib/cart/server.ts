@@ -1,5 +1,6 @@
 'use server';
 
+import { logger } from '../logger';
 import { cookies } from 'next/headers';
 import type { CartClient } from '@/components/cart/cart.types';
 import type { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
@@ -18,24 +19,24 @@ export async function getServerCart(): Promise<CartClient> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('payload-token')?.value;
-    
+
     if (!token) {
       // No auth token = guest user
       return { items: [] };
     }
-    
+
     // Fetch user's cart from database
     const { getPayload } = await import('payload');
     const { default: config } = await import('@/payload.config');
     const payload = await getPayload({ config });
-    
+
     // Get current user
     const { user } = await payload.auth({ headers: cookieStore as unknown as Headers | ReadonlyHeaders });
-    
+
     if (!user) {
       return { items: [] };
     }
-    
+
     // Fetch cart from database
     const carts = await payload.find({
       collection: 'carts',
@@ -44,13 +45,13 @@ export async function getServerCart(): Promise<CartClient> {
       },
       limit: 1,
     });
-    
+
     const cart = carts.docs[0];
-    
+
     if (!cart || !cart.items) {
       return { items: [] };
     }
-    
+
     // Transform to CartClient format
     return {
       items: (cart.items as PayloadCartItem[]).map((item) => ({
@@ -60,7 +61,7 @@ export async function getServerCart(): Promise<CartClient> {
       })),
     };
   } catch (error) {
-    console.error('[Server] Error fetching cart:', error);
+    logger.error({ err: error }, '[Server] Error fetching cart');
     return { items: [] };
   }
 }

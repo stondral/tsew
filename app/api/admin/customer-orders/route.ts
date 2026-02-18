@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log(`📦 Fetching orders for customer ${customerId}`);
+    logger.debug({ customerId }, "📦 Fetching orders for customer");
 
     // Fetch orders for this customer
     const { docs: orders } = await payload.find({
@@ -36,14 +37,14 @@ export async function GET(request: NextRequest) {
       overrideAccess: true,
     });
 
-    console.log(`✅ Found ${orders?.length || 0} orders for customer ${customerId}`);
+    logger.info({ customerId, orderCount: orders?.length || 0 }, "✅ Found customer orders");
 
     return NextResponse.json({
       docs: orders || [],
       total: orders?.length || 0,
     });
   } catch (error) {
-    console.error('❌ Failed to fetch customer orders:', error);
+    logger.error({ err: error, customerId: request.nextUrl.searchParams.get('customerId') }, '❌ Failed to fetch customer orders');
     return NextResponse.json(
       { error: 'Failed to fetch customer orders' },
       { status: 500 }

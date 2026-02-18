@@ -1,5 +1,5 @@
-// lib/payments/handleSubscriptionPaid.ts
 import { BasePayload } from "payload";
+import { logger } from "../logger";
 
 export async function handleSubscriptionPaid(
   payload: BasePayload,
@@ -21,26 +21,26 @@ export async function handleSubscriptionPaid(
   const user = users[0];
 
   if (!user) {
-    console.error(`User not found for subscriptionId: ${subscriptionId}`);
+    logger.error({ subscriptionId }, "User not found for subscriptionId");
     return;
   }
 
   // Convert UNIX timestamp to Date
   let nextBillingDate: Date;
-  
+
   if (nextBillingTimestamp && nextBillingTimestamp > 0) {
     nextBillingDate = new Date(nextBillingTimestamp * 1000);
   } else {
     // Fallback if timestamp is missing: current date + 1 period
     nextBillingDate = new Date();
     if (billingCycle === 'yearly') {
-        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+      nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
     } else {
-        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
     }
   }
 
-  console.log(`Setting next billing date to: ${nextBillingDate.toISOString()} (from timestamp: ${nextBillingTimestamp})`);
+  logger.debug({ userId: user.id, nextBillingDate, nextBillingTimestamp }, "Calculated next billing date");
 
   // Ensure we overwrite any incorrect date in the DB
   const updateData = {
@@ -57,5 +57,5 @@ export async function handleSubscriptionPaid(
     data: updateData as any, // Cast to any only for Payload's internal type check if needed
   });
 
-  console.log(`Updated user ${user.id} to plan ${planValue} (Subscription: ${subscriptionId})`);
+  logger.info({ userId: user.id, plan: planValue, subscriptionId }, "✅ User subscription updated successfully");
 }

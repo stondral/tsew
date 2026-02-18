@@ -2,6 +2,31 @@ import type { ReactNode } from 'react';
 import type { Viewport } from 'next';
 import QueryProvider from '@/providers/QueryProvider';
 import Script from 'next/script';
+import { Montserrat, Outfit, Playfair_Display, Roboto_Slab } from 'next/font/google';
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-montserrat',
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-outfit',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-playfair',
+});
+
+const robotoSlab = Roboto_Slab({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto-slab',
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -120,9 +145,9 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en">
-      <head>
-        {/* Preload critical fonts */}
+    <html lang="en" className={`${montserrat.variable} ${outfit.variable} ${playfair.variable} ${robotoSlab.variable}`}>
+       <head>
+        {/* Preload critical local fonts if any */}
         <link
           rel="preload"
           href="/fonts/inter-var.woff2"
@@ -130,21 +155,6 @@ export default function RootLayout({
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        {/* Google Fonts — non-render-blocking lazy load */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          id="google-fonts"
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Slab:wght@100..900&display=swap"
-          media="print"
-        />
-        <noscript>
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Outfit:wght@100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Slab:wght@100..900&display=swap"
-          />
-        </noscript>
       </head>
       <body>
         <Script
@@ -154,21 +164,6 @@ export default function RootLayout({
             __html: JSON.stringify(organizationSchema)
           }}
         />
-        <Script
-          id="google-fonts-loader"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                var el = document.getElementById('google-fonts');
-                if(el) {
-                  if(document.readyState === 'complete') { el.media = 'all'; }
-                  else { window.addEventListener('load', function(){ el.media = 'all'; }); }
-                }
-              })();
-            `
-          }}
-        />
         <QueryProvider>
           {children}
         </QueryProvider>
@@ -176,4 +171,3 @@ export default function RootLayout({
     </html>
   );
 }
-

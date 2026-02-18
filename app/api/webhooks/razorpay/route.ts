@@ -5,6 +5,7 @@ import { handleRazorpayPayment } from "@/lib/payments/handleRazorpayPayment";
 import { getPayload } from "payload";
 import config from "@/payload.config";
 import { handleSubscriptionPaid } from "@/lib/payments/handleSubscriptionPaid";
+import { logger } from "@/lib/logger";
 
 interface RazorpaySubscriptionEvent {
   event: string;
@@ -44,13 +45,13 @@ export async function POST(req: NextRequest) {
     if (event.event === "payment.captured") {
       await handleRazorpayPayment(event);
     }
-    
+
     // 2. Subscription Payments
     if (event.event === "subscription.paid") {
       const subscriptionEvent = event as RazorpaySubscriptionEvent;
       const subscription = subscriptionEvent.payload.subscription.entity;
-      
-      const planValue = subscription.notes?.plan || 'pro'; 
+
+      const planValue = subscription.notes?.plan || 'pro';
       const billingCycle = subscription.notes?.billingCycle;
       const nextCharge = subscription.next_charge || subscription.current_end || subscription.charge_at || 0;
 
@@ -63,29 +64,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (event.event === "subscription.cancelled" || 
-        event.event === "subscription.halted" || 
-        event.event === "subscription.expired") {
-        const subscription = (event as RazorpaySubscriptionEvent).payload.subscription.entity;
-        
-        const { docs: users } = await payload.find({
-            collection: "users",
-            where: { subscriptionId: { equals: subscription.id } }
-        });
+    if (event.event === "subscription.cancelled" ||
+      event.event === "subscription.halted" ||
+      event.event === "subscription.expired") {
+      const subscription = (event as RazorpaySubscriptionEvent).payload.subscription.entity;
 
-        if (users[0]) {
-            await payload.update({
-                collection: "users",
-                id: users[0].id,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                data: { subscriptionStatus: "cancelled" } as any
-            });
-            console.log(`Updated user ${users[0].id} status to cancelled due to ${event.event}`);
-        }
+      const { docs: users } = await payload.find({
+        collection: "users",
+        where: { subscriptionId: { equals: subscription.id } }
+      });
+
+      if (users[0]) {
+        await payload.update({
+          collection: "users",
+          id: users[0].id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          data: { subscriptionStatus: "cancelled" } as any
+        });
+        logger.info({ userId: users[0].id, event: event.event }, "Updated user subscription status to cancelled");
+      }
     }
 
   } catch (err) {
-    console.error("Webhook processing error:", err);
+    logger.error({ err, event: event.event }, "Webhook processing error");
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 

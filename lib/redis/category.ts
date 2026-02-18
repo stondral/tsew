@@ -1,6 +1,7 @@
 import redis, { safeRedisOperation } from './client';
 import { RedisKeys } from './keys';
 import { REDIS_CONFIG } from './config';
+import { logger } from '../logger';
 
 /**
  * Category Tree Caching Layer
@@ -44,7 +45,7 @@ function buildCategoryTree(categories: Category[]): Category[] {
   // Second pass: build tree structure
   categories.forEach(cat => {
     const category = categoryMap.get(cat.id)!;
-    
+
     if (cat.parent) {
       const parent = categoryMap.get(cat.parent);
       if (parent) {
@@ -70,16 +71,16 @@ export async function getCategoryTree(
     const cached = await redis.get<CategoryTree>(key);
 
     if (cached) {
-      console.log('✅ Category tree cache HIT');
+      logger.debug("✅ Category tree cache HIT");
       return cached;
     }
 
-    console.log('⚠️ Category tree cache MISS');
-    
+    logger.debug("⚠️ Category tree cache MISS");
+
     // Fetch from DB
     const result = await fetchFromDB();
     const categories = result.docs || [];
-    
+
     const categoryTree: CategoryTree = {
       categories,
       tree: buildCategoryTree(categories),
@@ -88,11 +89,11 @@ export async function getCategoryTree(
 
     // Cache for 24 hours
     await redis.setex(key, REDIS_CONFIG.TTL.CATEGORY_TREE, categoryTree);
-    console.log('✅ Category tree cached');
-    
+    logger.debug('✅ Category tree cached');
+
     return categoryTree;
   } catch (error) {
-    console.error('Redis getCategoryTree error, falling back to DB:', error);
+    logger.error({ err: error }, 'Redis getCategoryTree error, falling back to DB');
     const result = await fetchFromDB();
     return {
       categories: result.docs || [],
@@ -115,23 +116,23 @@ export async function getCategory(
     const cached = await redis.get<Category>(key);
 
     if (cached) {
-      console.log(`✅ Category cache HIT for: ${categoryId}`);
+      logger.debug({ categoryId }, `✅ Category cache HIT`);
       return cached;
     }
 
-    console.log(`⚠️ Category cache MISS for: ${categoryId}`);
-    
+    logger.debug({ categoryId }, `⚠️ Category cache MISS`);
+
     const category = await fetchFromDB();
-    
+
     if (category) {
       // Cache for 24 hours
       await redis.setex(key, REDIS_CONFIG.TTL.CATEGORY_TREE, category);
-      console.log(`✅ Category cached: ${categoryId}`);
+      logger.debug({ categoryId }, `✅ Category cached`);
     }
-    
+
     return category;
   } catch (error) {
-    console.error('Redis getCategory error, falling back to DB:', error);
+    logger.error({ err: error, categoryId }, 'Redis getCategory error, falling back to DB');
     return await fetchFromDB();
   }
 }
@@ -144,7 +145,7 @@ export async function invalidateCategoryTree(): Promise<void> {
   const operation = async () => {
     const key = RedisKeys.categoryTree();
     await redis.del(key);
-    console.log('✅ Category tree cache invalidated');
+    logger.info('✅ Category tree cache invalidated');
   };
 
   await safeRedisOperation(operation);
@@ -157,11 +158,11 @@ export async function invalidateCategory(categoryId: string): Promise<void> {
   const operation = async () => {
     const key = RedisKeys.category(categoryId);
     await redis.del(key);
-    
+
     // Also invalidate the entire tree since hierarchy might have changed
     await invalidateCategoryTree();
-    
-    console.log(`✅ Category cache invalidated: ${categoryId}`);
+
+    logger.info({ categoryId }, `✅ Category cache invalidated`);
   };
 
   await safeRedisOperation(operation);

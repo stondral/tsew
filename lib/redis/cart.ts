@@ -4,6 +4,7 @@ import { REDIS_CONFIG } from './config';
 import type { RedisCart, RedisCartItem } from './types';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
+import { logger } from '../logger';
 
 /**
  * Cart Caching Layer
@@ -32,17 +33,17 @@ export async function getCart(userId: string): Promise<RedisCartItem[]> {
     const cached = await redis.get<RedisCart>(key);
 
     if (cached && cached.items) {
-      console.log(`✅ Cart cache HIT for user: ${userId}`);
+      logger.debug({ userId }, "✅ Cart cache HIT");
       return cached.items;
     }
 
-    console.log(`⚠️ Cart cache MISS for user: ${userId}`);
+    logger.debug({ userId }, "⚠️ Cart cache MISS");
     // Cache miss - fetch from DB and populate cache
     const items = await getCartFromDB(userId);
     await setCart(userId, items);
     return items;
   } catch (error) {
-    console.error('Redis getCart error, falling back to DB:', error);
+    logger.error({ err: error, userId }, 'Redis getCart error, falling back to DB');
     return await getCartFromDB(userId);
   }
 }
@@ -64,7 +65,7 @@ export async function setCart(userId: string, items: RedisCartItem[]): Promise<v
     };
 
     await redis.setex(key, REDIS_CONFIG.TTL.CART, cart);
-    console.log(`✅ Cart cached for user: ${userId}`);
+    logger.debug({ userId }, "✅ Cart cached");
   };
 
   await safeRedisOperation(operation);
@@ -78,7 +79,7 @@ export async function addToCart(
   item: RedisCartItem
 ): Promise<RedisCartItem[]> {
   const currentItems = await getCart(userId);
-  
+
   // Check if item already exists
   const existingIndex = currentItems.findIndex(
     (i) => i.productId === item.productId && i.variantId === item.variantId
@@ -98,10 +99,10 @@ export async function addToCart(
   }
 
   await setCart(userId, updatedItems);
-  
+
   // Trigger background DB sync (non-blocking)
   syncCartToDB(userId, updatedItems).catch((err) =>
-    console.error('Background cart sync failed:', err)
+    logger.error({ err, userId }, 'Background cart sync failed')
   );
 
   return updatedItems;
@@ -116,16 +117,16 @@ export async function removeFromCart(
   variantId?: string | null
 ): Promise<RedisCartItem[]> {
   const currentItems = await getCart(userId);
-  
+
   const updatedItems = currentItems.filter(
     (item) => !(item.productId === productId && item.variantId === variantId)
   );
 
   await setCart(userId, updatedItems);
-  
+
   // Trigger background DB sync (non-blocking)
   syncCartToDB(userId, updatedItems).catch((err) =>
-    console.error('Background cart sync failed:', err)
+    logger.error({ err, userId }, 'Background cart sync failed')
   );
 
   return updatedItems;
@@ -141,7 +142,7 @@ export async function updateCartItemQuantity(
   variantId?: string | null
 ): Promise<RedisCartItem[]> {
   const currentItems = await getCart(userId);
-  
+
   const updatedItems = currentItems.map((item) => {
     if (item.productId === productId && item.variantId === variantId) {
       return { ...item, quantity };
@@ -150,10 +151,10 @@ export async function updateCartItemQuantity(
   });
 
   await setCart(userId, updatedItems);
-  
+
   // Trigger background DB sync (non-blocking)
   syncCartToDB(userId, updatedItems).catch((err) =>
-    console.error('Background cart sync failed:', err)
+    logger.error({ err, userId }, 'Background cart sync failed')
   );
 
   return updatedItems;
@@ -164,10 +165,10 @@ export async function updateCartItemQuantity(
  */
 export async function clearCart(userId: string): Promise<void> {
   await setCart(userId, []);
-  
+
   // Trigger background DB sync (non-blocking)
   syncCartToDB(userId, []).catch((err) =>
-    console.error('Background cart sync failed:', err)
+    logger.error({ err, userId }, 'Background cart sync failed')
   );
 }
 
@@ -179,16 +180,16 @@ export async function mergeGuestCart(
   guestItems: RedisCartItem[]
 ): Promise<RedisCartItem[]> {
   const userItems = await getCart(userId);
-  
+
   // Create a map for efficient merging
   const itemMap = new Map<string, RedisCartItem>();
-  
+
   // Add user items to map
   userItems.forEach((item) => {
     const key = `${item.productId}-${item.variantId || 'null'}`;
     itemMap.set(key, item);
   });
-  
+
   // Merge guest items
   guestItems.forEach((item) => {
     const key = `${item.productId}-${item.variantId || 'null'}`;
@@ -207,10 +208,10 @@ export async function mergeGuestCart(
 
   const mergedItems = Array.from(itemMap.values());
   await setCart(userId, mergedItems);
-  
+
   // Trigger background DB sync (non-blocking)
   syncCartToDB(userId, mergedItems).catch((err) =>
-    console.error('Background cart sync failed:', err)
+    logger.error({ err, userId }, 'Background cart sync failed')
   );
 
   return mergedItems;
@@ -226,7 +227,7 @@ export async function syncCartToDB(
 ): Promise<void> {
   try {
     const payload = await getPayload({ config });
-    
+
     // Check if user already has a cart
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existingCart = await (payload as any).find({
@@ -247,7 +248,7 @@ export async function syncCartToDB(
           items,
         },
       });
-      console.log(`✅ Cart synced to DB for user: ${userId}`);
+      logger.info({ userId }, "✅ Cart synced to DB");
     } else {
       // Create new cart
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -258,7 +259,7 @@ export async function syncCartToDB(
           items,
         },
       });
-      console.log(`✅ New cart created in DB for user: ${userId}`);
+      logger.info({ userId }, "✅ New cart created in DB");
     }
 
     // Update last synced timestamp in Redis
@@ -271,7 +272,7 @@ export async function syncCartToDB(
       }
     }
   } catch (error) {
-    console.error('Failed to sync cart to DB:', error);
+    logger.error({ err: error, userId }, 'Failed to sync cart to DB');
     throw error;
   }
 }
@@ -282,7 +283,7 @@ export async function syncCartToDB(
 async function getCartFromDB(userId: string): Promise<RedisCartItem[]> {
   try {
     const payload = await getPayload({ config });
-    
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (payload as any).find({
       collection: 'carts',
@@ -298,7 +299,7 @@ async function getCartFromDB(userId: string): Promise<RedisCartItem[]> {
 
     return result.docs[0].items || [];
   } catch (error) {
-    console.error('Failed to fetch cart from DB:', error);
+    logger.error({ err: error, userId }, 'Failed to fetch cart from DB');
     return [];
   }
 }
@@ -308,9 +309,9 @@ async function getCartFromDB(userId: string): Promise<RedisCartItem[]> {
  * Use this for maintenance or before deployment
  */
 export async function syncAllCartsToDB(): Promise<void> {
-  console.log('⚠️ Syncing all carts from Redis to DB...');
+  logger.info('⚠️ Syncing all carts from Redis to DB...');
   // This would require scanning all cart keys in Redis
   // For now, this is a placeholder for future implementation
   // In production, you'd use Redis SCAN to iterate through cart:* keys
-  console.log('✅ All carts synced (placeholder)');
+  logger.info('All carts synced (placeholder)');
 }

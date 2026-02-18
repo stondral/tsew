@@ -1,6 +1,7 @@
 import redis, { safeRedisOperation } from './client';
 import { RedisKeys } from './keys';
 import { REDIS_CONFIG } from './config';
+import { logger } from '../logger';
 
 /**
  * Wishlist Caching Layer
@@ -39,11 +40,11 @@ export async function getWishlist(
     const cached = await redis.get<RedisWishlist>(key);
 
     if (cached) {
-      console.log(`✅ Wishlist cache HIT for user: ${userId}`);
+      logger.debug({ userId }, "✅ Wishlist cache HIT");
       return cached;
     }
 
-    console.log(`⚠️ Wishlist cache MISS for user: ${userId}`);
+    logger.debug({ userId }, "⚠️ Wishlist cache MISS");
 
     // Fetch from DB
     const wishlistDoc = await fetchFromDB();
@@ -60,11 +61,11 @@ export async function getWishlist(
 
     // Cache for 7 days
     await redis.setex(key, REDIS_CONFIG.TTL.WISHLIST, wishlist);
-    console.log(`✅ Wishlist cached for user: ${userId}`);
+    logger.debug({ userId }, "✅ Wishlist cached");
 
     return wishlist;
   } catch (error) {
-    console.error('Redis getWishlist error, falling back to DB:', error);
+    logger.error({ err: error, userId }, 'Redis getWishlist error, falling back to DB');
     const wishlistDoc = await fetchFromDB();
     return {
       userId,
@@ -102,7 +103,7 @@ export async function addToWishlist(
 
     // Check if already in wishlist
     if (wishlist.products.includes(productId)) {
-      console.log(`⚠️ Product already in wishlist: ${productId}`);
+      logger.debug({ userId, productId }, "⚠️ Product already in wishlist");
       return wishlist;
     }
 
@@ -116,16 +117,16 @@ export async function addToWishlist(
 
     // Update Redis immediately
     await redis.setex(key, REDIS_CONFIG.TTL.WISHLIST, wishlist);
-    console.log(`✅ Product added to wishlist (Redis): ${productId}`);
+    logger.info({ userId, productId }, "✅ Product added to wishlist (Redis)");
 
     // Background DB sync (fire and forget)
     syncWishlistToDB(userId).catch(err =>
-      console.error('Background wishlist sync failed:', err)
+      logger.error({ err, userId }, 'Background wishlist sync failed')
     );
 
     return wishlist;
   } catch (error) {
-    console.error('Failed to add to wishlist:', error);
+    logger.error({ err: error, userId, productId }, 'Failed to add to wishlist');
     throw error;
   }
 }
@@ -144,7 +145,7 @@ export async function removeFromWishlist(
     const wishlist = await redis.get<RedisWishlist>(key);
 
     if (!wishlist) {
-      console.log(`⚠️ Wishlist not found for user: ${userId}`);
+      logger.debug({ userId }, "⚠️ Wishlist not found");
       return {
         userId,
         products: [],
@@ -160,16 +161,16 @@ export async function removeFromWishlist(
 
     // Update Redis immediately
     await redis.setex(key, REDIS_CONFIG.TTL.WISHLIST, wishlist);
-    console.log(`✅ Product removed from wishlist (Redis): ${productId}`);
+    logger.info({ userId, productId }, "✅ Product removed from wishlist (Redis)");
 
     // Background DB sync
     syncWishlistToDB(userId).catch(err =>
-      console.error('Background wishlist sync failed:', err)
+      logger.error({ err, userId }, 'Background wishlist sync failed')
     );
 
     return wishlist;
   } catch (error) {
-    console.error('Failed to remove from wishlist:', error);
+    logger.error({ err: error, userId, productId }, 'Failed to remove from wishlist');
     throw error;
   }
 }
@@ -189,14 +190,14 @@ export async function clearWishlist(userId: string): Promise<void> {
     };
 
     await redis.setex(key, REDIS_CONFIG.TTL.WISHLIST, emptyWishlist);
-    console.log(`✅ Wishlist cleared for user: ${userId}`);
+    logger.info({ userId }, "✅ Wishlist cleared");
 
     // Background DB sync
     syncWishlistToDB(userId).catch(err =>
-      console.error('Background wishlist sync failed:', err)
+      logger.error({ err, userId }, 'Background wishlist sync failed')
     );
   } catch (error) {
-    console.error('Failed to clear wishlist:', error);
+    logger.error({ err: error, userId }, 'Failed to clear wishlist');
     throw error;
   }
 }
@@ -214,7 +215,7 @@ export async function isInWishlist(
 
     return wishlist?.products.includes(productId) || false;
   } catch (error) {
-    console.error('Failed to check wishlist:', error);
+    logger.error({ err: error, userId, productId }, 'Failed to check wishlist');
     return false;
   }
 }
@@ -225,9 +226,7 @@ export async function isInWishlist(
 async function syncWishlistToDB(
   userId: string
 ): Promise<void> {
-  // This will be called from API routes with access to Payload
-  // For now, just log the sync intention
-  console.log(`🔄 Syncing wishlist to DB for user: ${userId}`);
+  logger.info({ userId }, "🔄 Syncing wishlist to DB");
 
   // The actual DB sync will be implemented in the API route
   // using payload.update() or payload.create()
@@ -240,7 +239,7 @@ export async function invalidateWishlist(userId: string): Promise<void> {
   const operation = async () => {
     const key = RedisKeys.wishlist(userId);
     await redis.del(key);
-    console.log(`✅ Wishlist cache invalidated for user: ${userId}`);
+    logger.info({ userId }, "✅ Wishlist cache invalidated");
   };
 
   await safeRedisOperation(operation);

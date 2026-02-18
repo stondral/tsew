@@ -2,32 +2,33 @@
 
 import { Product } from "./product";
 import { resolveMediaUrl } from "@/lib/media";
+import { logger } from "@/lib/logger";
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   // Try Redis cache first
   const cacheKey = `product:slug:${slug}`;
-  
+
   try {
     const { default: redis } = await import('@/lib/redis/client');
-    
+
     // Check cache
     const cached = await redis.get<Product>(cacheKey);
     if (cached) {
-      console.log(`✅ [CACHE HIT] Product: ${slug}`);
+      logger.debug({ slug }, "✅ [CACHE HIT] Product");
       return cached;
     }
-    
-    console.log(`⚠️ [CACHE MISS] Product: ${slug}`);
+
+    logger.debug({ slug }, "⚠️ [CACHE MISS] Product");
   } catch (cacheError) {
-    console.error('[Redis] Cache read error, proceeding to DB:', cacheError);
+    logger.error({ err: cacheError }, '[Redis] Cache read error, proceeding to DB');
   }
-  
+
   // Fetch from database
   const { getPayload } = await import("payload");
   const { default: config } = await import("@/payload.config");
   const payload = await getPayload({ config });
-  
-  console.time(`[DB] Product query: ${slug}`);
+
+  const startTime = Date.now();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await (payload as any).find({
     collection: "products",
@@ -64,7 +65,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
     },
     overrideAccess: true,
   });
-  console.timeEnd(`[DB] Product query: ${slug}`);
+  const duration = Date.now() - startTime;
+  logger.debug({ slug, duration: `${duration}ms` }, "[DB] Product query finished");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const p = (data?.docs?.[0]) as any;
@@ -140,9 +142,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       if (!p.seller) {
         return undefined;
       }
-      
+
       const s = p.seller;
-      console.log("DEBUG: product.seller populated data:", JSON.stringify(s, null, 2));
 
       // If s is just an ID (not populated)
       if (typeof s === 'string') {
@@ -163,18 +164,18 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       };
     })(),
   };
-  
+
   // Cache the product (fire and forget, don't block response)
   try {
     const { default: redis } = await import('@/lib/redis/client');
     const { REDIS_CONFIG } = await import('@/lib/redis/config');
-    
+
     // Cache for 1 hour (3600 seconds)
     await redis.setex(cacheKey, REDIS_CONFIG.TTL.PRODUCT, product);
-    console.log(`✅ [CACHED] Product: ${slug}`);
+    logger.debug({ slug }, "✅ [CACHED] Product");
   } catch (cacheError) {
-    console.error('[Redis] Cache write error (non-blocking):', cacheError);
+    logger.error({ err: cacheError }, '[Redis] Cache write error (non-blocking)');
   }
-  
+
   return product;
 }

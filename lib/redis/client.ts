@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { logger, devLog } from '../logger';
 
 /**
  * Redis Client Singleton
@@ -24,13 +25,13 @@ if (!process.env.UPSTASH_REDIS_REST_TOKEN) {
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  
+
   // Automatic retry with exponential backoff
   retry: {
     retries: 3,
     backoff: (retryCount) => Math.min(1000 * 2 ** retryCount, 10000),
   },
-  
+
   // Enable automatic deserialization of JSON
   automaticDeserialization: true,
 });
@@ -43,12 +44,12 @@ export async function testRedisConnection(): Promise<boolean> {
   try {
     const result = await redis.ping();
     if (result === 'PONG') {
-      console.log('✅ Redis connection successful');
+      devLog('✅ Redis connection successful');
       return true;
     }
     throw new Error('Redis ping failed');
   } catch (error) {
-    console.error('❌ Redis connection failed:', error);
+    logger.error({ err: error }, '❌ Redis connection failed');
     throw error;
   }
 }
@@ -72,7 +73,7 @@ export async function safeRedisOperation<T>(
   try {
     return await operation();
   } catch (error) {
-    console.error('Redis operation failed, using fallback:', error);
+    logger.error({ err: error }, 'Redis operation failed, using fallback');
     return fallbackValue;
   }
 }

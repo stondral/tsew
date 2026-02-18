@@ -1,8 +1,10 @@
+import { logger } from './logger';
+
 const DELHIVERY_API_URL = process.env.DELHIVERY_API_URL || "https://track.delhivery.com";
 const DELHIVERY_TOKEN = process.env.DELHIVERY_TOKEN;
 
 if (!DELHIVERY_TOKEN) {
-  console.warn("DELHIVERY_TOKEN is missing in environment variables. Delhivery API calls will fail.");
+  logger.warn("DELHIVERY_TOKEN is missing in environment variables. Delhivery API calls will fail.");
 }
 
 export interface DelhiveryTATParams {
@@ -54,7 +56,7 @@ export async function getExpectedTAT(params: DelhiveryTATParams) {
     url.searchParams.append("weight", params.weight.toString());
   }
 
-  console.log("Calling Delhivery EDD API (GET):", url.toString());
+  logger.debug({ url: url.toString() }, "Calling Delhivery EDD API (GET)");
 
   try {
     const response = await fetch(url.toString(), {
@@ -67,15 +69,15 @@ export async function getExpectedTAT(params: DelhiveryTATParams) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Delhivery TAT API error (${response.status}): ${errorText}`);
+      logger.error({ status: response.status, errorText }, "Delhivery TAT API error");
       throw new Error(`Delhivery TAT API error: ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log("Delhivery TAT RAW Response:", JSON.stringify(data, null, 2));
+    logger.debug({ data }, "Delhivery TAT RAW Response");
     return data;
   } catch (error) {
-    console.error("Delhivery TAT fetch failed:", error);
+    logger.error({ err: error }, "Delhivery TAT fetch failed");
     return null;
   }
 }
@@ -108,7 +110,7 @@ export async function calculateShippingCost(params: DelhiveryCostParams) {
   if (params.b) url.searchParams.append("b", params.b.toString());
   if (params.h) url.searchParams.append("h", params.h.toString());
 
-  console.log("Calling Delhivery Shipping Cost API (GET):", url.toString());
+  logger.debug({ url: url.toString() }, "Calling Delhivery Shipping Cost API (GET)");
 
   try {
     const response = await fetch(url.toString(), {
@@ -121,13 +123,13 @@ export async function calculateShippingCost(params: DelhiveryCostParams) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Delhivery Cost API error details: ${errorText}`);
+      logger.error({ status: response.status, errorText }, "Delhivery Cost API error");
       throw new Error(`Delhivery Cost API error: ${response.statusText} - ${errorText}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Delhivery Cost fetch failed:", error);
+    logger.error({ err: error }, "Delhivery Cost fetch failed");
     return null;
   }
 }
@@ -161,7 +163,7 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
     country: "India"
   };
 
-  console.log("🏢 Registering warehouse with Delhivery:", params.name);
+  logger.info({ warehouseName: params.name }, "🏢 Registering warehouse with Delhivery");
 
   try {
     const response = await fetch(url, {
@@ -179,12 +181,10 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
     try {
       data = JSON.parse(responseText);
     } catch {
-      // Try parsing XML response for Delhivery's native format
-      console.warn("Non-JSON response from warehouse registration, attempting XML parsing");
+      logger.warn("Non-JSON response from warehouse registration, attempting XML parsing");
 
-      // Check if it's an "already exists" error in XML
       if (responseText.includes('already exists')) {
-        console.log("✅ Warehouse already registered with Delhivery (no re-registration needed)");
+        logger.info("✅ Warehouse already registered with Delhivery (no re-registration needed)");
         return {
           success: true,
           status: response.status,
@@ -196,18 +196,18 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
       data = { raw_response: responseText };
     }
 
-    console.log("🏢 Warehouse registration response status:", response.status);
+    logger.debug({ status: response.status }, "🏢 Warehouse registration response status");
 
     // Success cases
     if (response.ok) {
-      console.log("✅ Warehouse registered successfully");
+      logger.info("✅ Warehouse registered successfully");
       return { success: true, ...data };
     }
 
     // Handle 400 error - check if it's "already exists"
     if (response.status === 400) {
       if (responseText.includes('already exists')) {
-        console.log("✅ Warehouse already registered with Delhivery (treating as success)");
+        logger.info("✅ Warehouse already registered with Delhivery (treating as success)");
         return {
           success: true,
           status: 400,
@@ -217,8 +217,7 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
         };
       }
 
-      // Other 400 errors
-      console.error(`❌ Warehouse registration failed (400):`, responseText.substring(0, 200));
+      logger.error({ status: response.status, responseText: responseText.substring(0, 200) }, "❌ Warehouse registration failed (400)");
       return {
         success: false,
         status: response.status,
@@ -227,8 +226,7 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
       };
     }
 
-    // Other error status codes
-    console.error(`❌ Warehouse registration failed (${response.status}):`, responseText.substring(0, 200));
+    logger.error({ status: response.status, responseText: responseText.substring(0, 200) }, "❌ Warehouse registration failed");
     return {
       success: false,
       status: response.status,
@@ -236,7 +234,7 @@ export async function registerWarehouse(params: DelhiveryWarehouseParams) {
     };
 
   } catch (error) {
-    console.error("Delhivery Warehouse registration request failed:", error);
+    logger.error({ err: error }, "Delhivery Warehouse registration request failed");
     return {
       success: false,
       error: String(error),
@@ -321,9 +319,8 @@ export async function createShipment(params: DelhiveryShipmentParams) {
   };
 
   const bodyData = JSON.stringify(payload);
-  console.log("🚚 Constructing Delhivery Manifest payload:", bodyData);
-  console.log("📋 Shipment fields:", Object.keys(shipment).join(", "));
-  console.log(`💳 Payment Mode: ${params.payment_mode}${params.payment_mode === 'COD' ? ` (COD Amount: ₹${params.cod_amount || params.amount})` : ' (Prepaid)'}`);
+  logger.debug({ payload }, "🚚 Constructing Delhivery Manifest payload");
+  logger.debug({ payment_mode: params.payment_mode }, "💳 Payment Mode");
 
   // Validate shipment data
   const requiredFields = ['name', 'order', 'phone', 'add', 'pin', 'payment_mode', 'products_desc', 'pickup_location', 'weight'];
@@ -335,9 +332,9 @@ export async function createShipment(params: DelhiveryShipmentParams) {
   }
 
   if (missingInShipment.length > 0) {
-    console.error("❌ Missing required fields in shipment:", missingInShipment);
-    console.error("Shipment object:", JSON.stringify(shipment, null, 2));
+    logger.error({ missingFields: missingInShipment, shipment }, "❌ Missing required fields in shipment");
     return {
+      // ...
       success: false,
       error: true,
       rmk: `Missing required fields: ${missingInShipment.join(', ')}`
@@ -345,12 +342,10 @@ export async function createShipment(params: DelhiveryShipmentParams) {
   }
 
   try {
-    console.log("📤 Sending request to:", url);
-    console.log("Authorization token present:", !!DELHIVERY_TOKEN);
+    logger.debug({ url }, "📤 Sending request to Delhivery");
 
     // Despite documentation showing application/json, Delhivery API expects form-encoded data with format=json key
     const body = `format=json&data=${encodeURIComponent(bodyData)}`;
-    console.log("Body format: form-encoded with format=json key");
 
     const response = await fetch(url, {
       method: 'POST',
@@ -362,17 +357,16 @@ export async function createShipment(params: DelhiveryShipmentParams) {
       body: body
     });
 
-    console.log("📬 Response status:", response.status, response.statusText);
+    logger.debug({ status: response.status }, "📬 Delhivery response received");
 
     const responseText = await response.text();
-    console.log("📬 Raw response:", responseText.substring(0, 300));
+    logger.debug({ responseText: responseText.substring(0, 300) }, "📬 Raw response snippet");
 
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (parseError) {
-      console.error("❌ Failed to parse response as JSON:", parseError);
-      console.error("Raw response:", responseText);
+      logger.error({ err: parseError, responseText }, "❌ Failed to parse response as JSON");
       return {
         success: false,
         error: true,
@@ -381,11 +375,11 @@ export async function createShipment(params: DelhiveryShipmentParams) {
     }
 
     if (!response.ok) {
-      console.error(`❌ Delhivery API returned ${response.status}:`, data);
+      logger.error({ status: response.status, data }, "❌ Delhivery API error");
       return data || { success: false, error: true, rmk: `HTTP ${response.status}` };
     }
 
-    console.log("✅ Delhivery Manifestation RAW result:", JSON.stringify(data, null, 2));
+    logger.debug({ data }, "✅ Delhivery Manifestation result");
 
     // Check for specific error conditions and provide helpful messages
     if (!data.success) {
@@ -418,13 +412,13 @@ export async function createShipment(params: DelhiveryShipmentParams) {
 
       // Generic error logging
       if (data.rmk) {
-        console.error("⚠️ Delhivery returned error:", data.rmk);
+        logger.error({ rmk: data.rmk }, "⚠️ Delhivery returned error");
       }
     }
 
     return data;
   } catch (error) {
-    console.error("Delhivery Shipment creation failed:", error);
+    logger.error({ err: error }, "Delhivery Shipment creation failed");
     return {
       success: false,
       error: true,
