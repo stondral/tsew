@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import {
-  Search,
-  MessageCircle,
-  Clock,
+import { 
+  Search, 
+  MessageCircle, 
+  Clock, 
   AlertTriangle,
   UserPlus,
   CheckCircle2,
@@ -17,37 +17,27 @@ import { cn } from "@/lib/utils";
 import { ChatWindow } from "@/components/admin/ChatWindow";
 import { OrderHistory } from "@/components/admin/OrderHistory";
 
-interface SupportTicket {
+interface Ticket {
   id: string;
   ticketNumber?: string;
-  subject: string;
+  subject?: string;
   status: string;
   priority: string;
+  updatedAt: string | number | Date;
   customer?: {
     id: string;
     username?: string;
-    email: string;
+    email?: string;
   };
   order?: string | {
     id: string;
-    orderNumber: string;
+    orderNumber?: string;
   };
-  updatedAt: string;
 }
 
 interface SupportPanelClientProps {
-  initialTickets: SupportTicket[];
+  initialTickets: Ticket[];
   adminId: string;
-}
-
-interface OrderItem {
-  productName: string;
-  productImage?: {
-    id: string;
-    url: string;
-    alt?: string;
-  }; // Payload Media
-  quantity: number;
 }
 
 export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClientProps) {
@@ -59,7 +49,7 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  const selectedTicket = useMemo(() =>
+  const selectedTicket = useMemo(() => 
     tickets.find(t => t.id === selectedTicketId),
     [tickets, selectedTicketId]
   );
@@ -69,12 +59,12 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
     const initSSE = async () => {
       try {
         console.log("📡 SupportPanelClient: Initializing SSE stream for admin notifications...");
-
+        
         // Get token for authentication
-        const token = typeof window !== 'undefined'
+        const token = typeof window !== 'undefined' 
           ? localStorage.getItem('payload-token')
           : null;
-
+        
         if (!token) {
           console.warn("⚠️ SupportPanelClient: No auth token found - SSE will not connect");
           setIsConnected(false);
@@ -82,7 +72,7 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
         }
 
         console.log("🔑 SupportPanelClient: Token found, connecting to SSE stream");
-
+        
         // Connect to admin notifications stream
         const url = `/api/support/stream?ticketId=admin-notifications`;
         const eventSource = new EventSource(url);
@@ -97,10 +87,10 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
           try {
             const data = JSON.parse(event.data);
             console.log("📬 SupportPanelClient: New notification:", data);
-
+            
             if (data.type === "new_message") {
               const { ticketId } = data;
-
+              
               // ✅ Mark ticket as having unread messages
               if (ticketId !== selectedTicketId) {
                 setUnreadCounts(prev => ({
@@ -158,13 +148,13 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
 
   const filteredTickets = useMemo(() => {
     return tickets.filter(t => {
-      const matchesSearch =
+      const matchesSearch = 
         t.ticketNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.customer?.email?.toLowerCase().includes(searchQuery.toLowerCase());
-
+      
       const matchesStatus = filterStatus === "all" || t.status === filterStatus;
-
+      
       return matchesSearch && matchesStatus;
     });
   }, [tickets, searchQuery, filterStatus]);
@@ -189,8 +179,8 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
             <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">Support Tickets</h2>
             <div className={cn(
               "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider",
-              isConnected
-                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+              isConnected 
+                ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400" 
                 : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
             )}>
               {isConnected ? (
@@ -209,8 +199,8 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
 
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search by name, email..."
+            <Input 
+              placeholder="Search by name, email..." 
               className="pl-10 pr-4 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm h-10 focus:ring-2 focus:ring-indigo-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -219,13 +209,13 @@ export function SupportPanelClient({ initialTickets, adminId }: SupportPanelClie
 
           <div className="flex gap-2">
             {["all", "open", "pending", "closed"].map((status) => (
-              <Button
+              <Button 
                 key={status}
                 onClick={() => setFilterStatus(status)}
                 className={cn(
                   "px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all",
-                  filterStatus === status
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                  filterStatus === status 
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30" 
                     : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                 )}
               >

@@ -6,9 +6,9 @@ import path from 'path';
  * and replaces placeholders with actual values
  */
 export function getEmailTemplate(
-  templateName: 
-    | 'welcome-mail' 
-    | 'forgot-password-mail' 
+  templateName:
+    | 'welcome-mail'
+    | 'forgot-password-mail'
     | 'order-confirmation'
     | 'seller-order-notification'
     | 'low-stock-alert'
@@ -18,18 +18,19 @@ export function getEmailTemplate(
     | 'review-confirmation'
     | 'product-submission-admin'
     | 'product-approved'
-    | 'product-rejected',
+    | 'product-rejected'
+    | 'product-under-review',
   replacements: Record<string, string>
 ): string {
   const templatePath = path.join(process.cwd(), 'email-templates', `${templateName}.html`);
   let template = fs.readFileSync(templatePath, 'utf-8');
-  
+
   // Replace all placeholders like {{username}}, {{verifyUrl}}, etc.
   Object.entries(replacements).forEach(([key, value]) => {
     const placeholder = `{{${key}}}`;
     template = template.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
   });
-  
+
   return template;
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import * as Sentry from "@sentry/nextjs";
 import Image from 'next/image';
 import { AlertTriangle, RefreshCcw, Home, MessageSquare } from 'lucide-react';
 import logoston from '@/components/logoston.png';
@@ -16,6 +17,7 @@ export default function GlobalError({
   useEffect(() => {
     // Log the error to an error reporting service
     console.error('Global Error:', error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (

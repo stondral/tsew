@@ -21,13 +21,13 @@ export async function createProductAction(data: any) {
     }
 
     const { hasPermission, getSellersWithPermission } = await import('@/lib/rbac/permissions');
-    
+
     // Determine target seller organization
     let targetSellerId = data.sellerId;
-    
+
     if (!targetSellerId) {
       const allowedSellers = await getSellersWithPermission(payload, user.id, 'product.create');
-      
+
       // Look for a real organization ID among allowed sellers
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const orgs = await (payload as any).find({
@@ -36,7 +36,7 @@ export async function createProductAction(data: any) {
         limit: 1,
         overrideAccess: true,
       })
-      
+
       if (orgs.docs.length > 0) {
         targetSellerId = orgs.docs[0].id;
       } else {
@@ -45,7 +45,7 @@ export async function createProductAction(data: any) {
     }
 
     const canCreate = await hasPermission(payload, user.id, targetSellerId, 'product.create');
-    
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!canCreate && (user as any).role !== "admin") {
       return { success: false, error: "You don't have permission to create products for this organization" };
@@ -80,6 +80,55 @@ export async function createProductAction(data: any) {
       collection: "products",
       data: insertData,
     });
+
+    // Notify Admins
+    try {
+      const admins = await payload.find({
+        collection: 'users',
+        where: { role: { equals: 'admin' } },
+      });
+
+      const frontendURL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+      const { getEmailTemplate } = await import("@/lib/email-templates");
+
+      for (const admin of admins.docs) {
+        const emailHtml = getEmailTemplate('product-submission-admin', {
+          productName: product.name,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          sellerName: (user as any).username || user.email,
+          approvalUrl: `${frontendURL}/administrator/products`,
+        });
+
+        await payload.sendEmail({
+          to: admin.email,
+          subject: `🚀 New Product Submission: ${product.name}`,
+          html: emailHtml,
+        });
+      }
+    } catch (emailErr) {
+      console.error("Failed to notify admins of product submission:", emailErr);
+    }
+
+    // Send confirmation email to seller
+    try {
+      const frontendURL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+      const { getEmailTemplate } = await import("@/lib/email-templates");
+
+      const sellerEmailHtml = getEmailTemplate('product-under-review', {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        username: (user as any).username || user.email,
+        productName: product.name,
+        dashboardUrl: `${frontendURL}/seller/products`,
+      });
+
+      await payload.sendEmail({
+        to: user.email,
+        subject: `Your Product is Under Review – Stond Emporium`,
+        html: sellerEmailHtml,
+      });
+    } catch (sellerEmailErr) {
+      console.error("Failed to send seller confirmation email:", sellerEmailErr);
+    }
 
     revalidatePath("/seller/products");
 
@@ -150,7 +199,7 @@ export async function updateProductAction(id: string, data: any) {
     });
 
     revalidatePath("/seller/products");
-    
+
     return { success: true, product: updatedProduct };
   } catch (err: unknown) {
     console.error("Critical error in updateProductAction:", err);

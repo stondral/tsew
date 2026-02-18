@@ -100,14 +100,14 @@ export async function createProduct(data: any) {
     }
 
     const { hasPermission } = await import('@/lib/rbac/permissions');
-    
+
     // Determine target seller organization
     let targetSellerId = data.sellerId;
-    
+
     if (!targetSellerId) {
       const { getSellersWithPermission } = await import('@/lib/rbac/permissions');
       const allowedSellers = await getSellersWithPermission(payload, user.id, 'product.create');
-      
+
       // Look for a real organization ID among allowed sellers
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const orgs = await (payload as any).find({
@@ -116,7 +116,7 @@ export async function createProduct(data: any) {
         limit: 1,
         overrideAccess: true,
       })
-      
+
       if (orgs.docs.length > 0) {
         targetSellerId = orgs.docs[0].id;
       } else {
@@ -125,14 +125,14 @@ export async function createProduct(data: any) {
     }
 
     const canCreate = await hasPermission(payload, user.id, targetSellerId, 'product.create');
-    
+
     if (!canCreate && user.role !== "admin") {
       throw new Error("You don't have permission to create products for this organization");
     }
 
     // Subscription Check
     if (user.role !== "admin" && user.subscriptionStatus !== "active") {
-        throw new Error("Active subscription required to list products");
+      throw new Error("Active subscription required to list products");
     }
 
     console.log("Creating product with name:", data.name);
@@ -198,8 +198,28 @@ export async function createProduct(data: any) {
       console.error("Failed to notify admins of product submission:", emailErr);
     }
 
+    // Send confirmation email to seller
+    try {
+      const frontendURL2 = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+      const { getEmailTemplate: getSellerEmailTemplate } = await import("@/lib/email-templates");
+
+      const sellerEmailHtml = getSellerEmailTemplate('product-under-review', {
+        username: user.username || user.email,
+        productName: product.name,
+        dashboardUrl: `${frontendURL2}/seller/products`,
+      });
+
+      await payload.sendEmail({
+        to: user.email,
+        subject: `Your Product is Under Review – Stond Emporium`,
+        html: sellerEmailHtml,
+      });
+    } catch (sellerEmailErr) {
+      console.error("Failed to send seller confirmation email:", sellerEmailErr);
+    }
+
     revalidatePath("/seller/products");
- 
+
     return { success: true, product };
   } catch (err) {
     console.error("Error in createProduct:", err);

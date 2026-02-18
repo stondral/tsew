@@ -13,19 +13,19 @@ export default function Hero() {
       <div className="container relative z-10 px-4 md:px-6">
         <div className="max-w-3xl">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-1 text-sm font-medium text-accent mb-6 backdrop-blur">
+            <div className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-1 text-sm font-medium text-accent mb-6 backdrop-blur" style={{ fontFamily: "'Outfit', sans-serif" }}>
               <Sparkles className="mr-2 h-4 w-4" />
               Discover India&apos;s Innovation
             </div>
 
-            <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight mb-6 text-white">
+            <h1 className="text-4xl sm:text-6xl font-display font-bold tracking-tight mb-6 text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
               Curated Products from <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-400 via-orange-500 to-red-500">
                 Top Indian Startups
               </span>
             </h1>
 
-            <p className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-1 text-sm font-medium text-accent mb-6 backdrop-blur">
+            <p className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-1 text-sm font-medium text-accent mb-6 backdrop-blur" style={{ fontFamily: "'Outfit', sans-serif" }}>
               Premium, innovative, and sustainable products — proudly made in
               India.
             </p>

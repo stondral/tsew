@@ -128,7 +128,7 @@ export default async function HomePage() {
 
         <section className="py-12 bg-white">
           <div className="px-4 max-w-6xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-center">
+            <h2 className="text-2xl font-bold mb-6 text-center" style={{ fontFamily: "'Roboto Slab', serif" }}>
               Featured <span className="text-orange-500">Innovations</span>
             </h2>
 
@@ -144,7 +144,7 @@ export default async function HomePage() {
         <Hero />
         <section className="py-12 bg-white">
           <div className="px-4 max-w-6xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-center">
+            <h2 className="text-2xl font-bold mb-6 text-center" style={{ fontFamily: "'Roboto Slab', serif" }}>
               Featured <span className="text-orange-500">Innovations</span>
             </h2>
             <p className="text-center text-gray-500">Unable to load products at this time.</p>

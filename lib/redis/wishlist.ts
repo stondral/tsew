@@ -44,10 +44,10 @@ export async function getWishlist(
     }
 
     console.log(`⚠️ Wishlist cache MISS for user: ${userId}`);
-    
+
     // Fetch from DB
     const wishlistDoc = await fetchFromDB();
-    
+
     const wishlist: RedisWishlist = {
       userId,
       products: wishlistDoc?.products || [],
@@ -61,7 +61,7 @@ export async function getWishlist(
     // Cache for 7 days
     await redis.setex(key, REDIS_CONFIG.TTL.WISHLIST, wishlist);
     console.log(`✅ Wishlist cached for user: ${userId}`);
-    
+
     return wishlist;
   } catch (error) {
     console.error('Redis getWishlist error, falling back to DB:', error);
@@ -87,10 +87,10 @@ export async function addToWishlist(
 ): Promise<RedisWishlist> {
   try {
     const key = RedisKeys.wishlist(userId);
-    
+
     // Get current wishlist
     let wishlist = await redis.get<RedisWishlist>(key);
-    
+
     if (!wishlist) {
       wishlist = {
         userId,
@@ -119,7 +119,7 @@ export async function addToWishlist(
     console.log(`✅ Product added to wishlist (Redis): ${productId}`);
 
     // Background DB sync (fire and forget)
-    syncWishlistToDB(userId, wishlist).catch(err =>
+    syncWishlistToDB(userId).catch(err =>
       console.error('Background wishlist sync failed:', err)
     );
 
@@ -139,10 +139,10 @@ export async function removeFromWishlist(
 ): Promise<RedisWishlist> {
   try {
     const key = RedisKeys.wishlist(userId);
-    
+
     // Get current wishlist
     const wishlist = await redis.get<RedisWishlist>(key);
-    
+
     if (!wishlist) {
       console.log(`⚠️ Wishlist not found for user: ${userId}`);
       return {
@@ -163,7 +163,7 @@ export async function removeFromWishlist(
     console.log(`✅ Product removed from wishlist (Redis): ${productId}`);
 
     // Background DB sync
-    syncWishlistToDB(userId, wishlist).catch(err =>
+    syncWishlistToDB(userId).catch(err =>
       console.error('Background wishlist sync failed:', err)
     );
 
@@ -180,7 +180,7 @@ export async function removeFromWishlist(
 export async function clearWishlist(userId: string): Promise<void> {
   try {
     const key = RedisKeys.wishlist(userId);
-    
+
     const emptyWishlist: RedisWishlist = {
       userId,
       products: [],
@@ -192,7 +192,7 @@ export async function clearWishlist(userId: string): Promise<void> {
     console.log(`✅ Wishlist cleared for user: ${userId}`);
 
     // Background DB sync
-    syncWishlistToDB(userId, emptyWishlist).catch(err =>
+    syncWishlistToDB(userId).catch(err =>
       console.error('Background wishlist sync failed:', err)
     );
   } catch (error) {
@@ -211,7 +211,7 @@ export async function isInWishlist(
   try {
     const key = RedisKeys.wishlist(userId);
     const wishlist = await redis.get<RedisWishlist>(key);
-    
+
     return wishlist?.products.includes(productId) || false;
   } catch (error) {
     console.error('Failed to check wishlist:', error);
@@ -223,13 +223,12 @@ export async function isInWishlist(
  * Sync wishlist to database (background operation)
  */
 async function syncWishlistToDB(
-  userId: string,
-  _wishlist: RedisWishlist
+  userId: string
 ): Promise<void> {
   // This will be called from API routes with access to Payload
   // For now, just log the sync intention
   console.log(`🔄 Syncing wishlist to DB for user: ${userId}`);
-  
+
   // The actual DB sync will be implemented in the API route
   // using payload.update() or payload.create()
 }

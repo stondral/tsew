@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 
 import { createProductAction } from "@/app/(frontend)/seller/(dashboard)/products/new-actions";
+import { SubmissionSuccessModal } from "@/components/seller/SubmissionSuccessModal";
 
 interface AddProductFormMultiStepProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -103,53 +104,55 @@ export function AddProductFormMultiStep({ categories }: AddProductFormMultiStepP
     }
   };
 
-  const handleSubmit = async () => {
-    if (!formData.category) {
-        setError("Please select a product category.");
-        return;
-    }
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-    setLoading(true);
-    setError(null);
+const handleSubmit = async () => {
+  if (!formData.category) {
+      setError("Please select a product category.");
+      return;
+  }
 
-    try {
-        const validVariants = formData.variants.filter(v => 
-            v.name.trim() !== '' && 
-            v.sku.trim() !== '' && 
-            v.price !== '' && 
-            v.stock !== ''
-        ).map(v => ({
-            name: v.name,
-            sku: v.sku,
-            price: parseFloat(v.price) || 0,
-            stock: parseInt(v.stock) || 0,
-        }));
+  setLoading(true);
+  setError(null);
 
-        const productData = {
-            ...formData,
-            media: formData.media.map(m => m.id),
-            variants: validVariants
-        };
-        
-        console.log("Submitting product data:", productData);
-        const result = await createProductAction(productData);
-        console.log("Form submission result:", result);
+  try {
+      const validVariants = formData.variants.filter(v => 
+          v.name.trim() !== '' && 
+          v.sku.trim() !== '' && 
+          v.price !== '' && 
+          v.stock !== ''
+      ).map(v => ({
+          name: v.name,
+          sku: v.sku,
+          price: parseFloat(v.price) || 0,
+          stock: parseInt(v.stock) || 0,
+      }));
 
-        if (result.success) {
-            localStorage.removeItem(STORAGE_KEY);
-            router.push("/seller/products");
-            router.refresh();
-        } else {
-            setError(result.error || "Failed to create product. Please check ALL required fields.");
-            setLoading(false);
-        }
-    } catch (err) {
-        console.error("Form submission error:", err);
-        const message = err instanceof Error ? err.message : "Failed to create product. Please try again.";
-        setError(message);
-        setLoading(false);
-    }
-  };
+      const productData = {
+          ...formData,
+          media: formData.media.map(m => m.id),
+          variants: validVariants
+      };
+      
+      console.log("Submitting product data:", productData);
+      const result = await createProductAction(productData);
+      console.log("Form submission result:", result);
+
+      if (result.success) {
+          localStorage.removeItem(STORAGE_KEY);
+          setLoading(false);
+          setShowSuccessModal(true);
+      } else {
+          setError(result.error || "Failed to create product. Please check ALL required fields.");
+          setLoading(false);
+      }
+  } catch (err) {
+      console.error("Form submission error:", err);
+      const message = err instanceof Error ? err.message : "Failed to create product. Please try again.";
+      setError(message);
+      setLoading(false);
+  }
+};
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -669,6 +672,7 @@ export function AddProductFormMultiStep({ categories }: AddProductFormMultiStepP
   };
 
   return (
+    <>
     <div className="max-w-4xl mx-auto">
       <Card className="border border-white/20 shadow-2xl shadow-slate-200/50 bg-white/80 backdrop-blur-md rounded-[2.5rem] overflow-hidden">
         {/* Progress indicator */}
@@ -717,5 +721,19 @@ export function AddProductFormMultiStep({ categories }: AddProductFormMultiStepP
         </CardContent>
       </Card>
     </div>
+
+      <SubmissionSuccessModal
+        isOpen={showSuccessModal}
+        mode="create"
+        onGoToDashboard={() => {
+          router.push("/seller/dashboard");
+          router.refresh();
+        }}
+        onViewProducts={() => {
+          router.push("/seller/products");
+          router.refresh();
+        }}
+      />
+    </>
   );
 }

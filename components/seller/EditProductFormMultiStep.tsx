@@ -17,13 +17,16 @@ import {
   Package, 
   ChevronRight,
   ChevronLeft,
-  Trash2
+  Trash2,
+  Eye
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { resolveMediaUrl } from "@/lib/media";
 import { updateProduct } from "@/app/(frontend)/seller/(dashboard)/products/actions";
+import { SubmissionSuccessModal } from "@/components/seller/SubmissionSuccessModal";
+import Link from "next/link";
 
 interface EditProductFormMultiStepProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,6 +126,8 @@ export function EditProductFormMultiStep({ product, categories }: EditProductFor
     }
   };
 
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const handleSubmit = async () => {
     if (!formData.category) {
         setError("Please select a product category.");
@@ -156,8 +161,8 @@ export function EditProductFormMultiStep({ product, categories }: EditProductFor
         
         if (result && result.success) {
             localStorage.removeItem(STORAGE_KEY);
-            router.push("/seller/products");
-            router.refresh();
+            setLoading(false);
+            setShowSuccessModal(true);
         } else if (result && !result.success) {
             setError(result.error || "Failed to update product. Please check ALL required fields.");
             setLoading(false);
@@ -678,6 +683,16 @@ export function EditProductFormMultiStep({ product, categories }: EditProductFor
                 </div>
             </div>
 
+            <Link href={`/seller/products/preview/${product.id}`} className="block">
+              <Button 
+                type="button"
+                variant="outline"
+                className="w-full h-12 bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider gap-3 mb-4 shadow-lg shadow-indigo-500/25 border-none transition-all hover:scale-[1.01]"
+              >
+                <Eye className="h-4 w-4" /> Preview Product
+              </Button>
+            </Link>
+
             <div className="flex gap-4 pt-2">
               <Button 
                 variant="ghost" 
@@ -700,6 +715,7 @@ export function EditProductFormMultiStep({ product, categories }: EditProductFor
   };
 
   return (
+    <>
     <div className="max-w-4xl mx-auto">
       <Card className="border border-white/20 shadow-2xl shadow-slate-200/50 bg-white/80 backdrop-blur-md rounded-[2.5rem] overflow-hidden">
         {/* Progress indicator */}
@@ -748,5 +764,19 @@ export function EditProductFormMultiStep({ product, categories }: EditProductFor
         </CardContent>
       </Card>
     </div>
+
+      <SubmissionSuccessModal
+        isOpen={showSuccessModal}
+        mode="edit"
+        onGoToDashboard={() => {
+          router.push("/seller/dashboard");
+          router.refresh();
+        }}
+        onViewProducts={() => {
+          router.push("/seller/products");
+          router.refresh();
+        }}
+      />
+    </>
   );
 }

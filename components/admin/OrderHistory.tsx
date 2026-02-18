@@ -7,32 +7,27 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { resolveMediaUrl } from "@/lib/utils";
 
+interface OrderItem {
+  productImage?: string | { url: string };
+  productName: string;
+}
+
+interface Order {
+  id: string;
+  orderNumber?: string;
+  status: string;
+  createdAt: string;
+  total?: number;
+  items: OrderItem[];
+}
+
 interface OrderHistoryProps {
   customerId: string;
   selectedOrderId?: string;
 }
 
-interface OrderItem {
-  productName: string;
-  productImage?: {
-    id: string;
-    url: string;
-    alt?: string;
-  };
-  quantity: number;
-}
-
-interface OrderRecord {
-  id: string;
-  orderNumber: string;
-  status: string;
-  createdAt: string;
-  total: number;
-  items: OrderItem[];
-}
-
 export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps) {
-  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -147,7 +142,7 @@ export function OrderHistory({ customerId, selectedOrderId }: OrderHistoryProps)
                   >
                     {item.productImage ? (
                       <Image
-                        src={resolveMediaUrl(item.productImage?.url || '')}
+                        src={resolveMediaUrl(typeof item.productImage === 'object' ? item.productImage.url : item.productImage)}
                         alt={item.productName}
                         width={24}
                         height={24}
