@@ -29,7 +29,7 @@ export const Products: CollectionConfig = {
 
       // Sellers/Employees with product.view permission
       const allowedSellers = await getSellersWithPermission(req.payload, req.user.id, 'product.view')
-      
+
       if (allowedSellers.length > 0) {
         return {
           or: [
@@ -56,7 +56,7 @@ export const Products: CollectionConfig = {
     create: async ({ req }) => {
       if (!req.user) return false
       if ((req.user as any).role === 'admin') return true
-      
+
       // In Payload, 'create' access doesn't always have access to the 'data' being submitted.
       // So we check if the user has permission for AT LEAST ONE seller to allow the UI to show the 'Create' button.
       // Strict validation for the SPECIFIC seller is handled in the beforeChange hook below.
@@ -109,7 +109,7 @@ export const Products: CollectionConfig = {
             if (!hasCreatePermission) {
               throw new Error("You do not have permission to create products for this organization");
             }
-            
+
             // Non-admins must always have their products start as pending
             data.status = 'pending'
           }
@@ -178,7 +178,7 @@ export const Products: CollectionConfig = {
         return data
       },
     ],
-    
+
     // Redis Cache Invalidation
     afterChange: [
       async ({ doc, operation }) => {
@@ -186,11 +186,11 @@ export const Products: CollectionConfig = {
         if (operation === 'create' || operation === 'update') {
           try {
             const { invalidateProduct, invalidateCategory } = await import('@/lib/redis/product');
-            
+
             // Invalidate the specific product
             await invalidateProduct(doc.id);
             console.log(`✅ Invalidated product cache: ${doc.id}`);
-            
+
             // Invalidate category cache if category exists
             if (doc.category) {
               const categoryId = typeof doc.category === 'string' ? doc.category : doc.category.id;
@@ -255,6 +255,7 @@ export const Products: CollectionConfig = {
       name: 'featured',
       type: 'checkbox',
       defaultValue: false,
+      index: true,
       access: {
         create: ({ req }) => (req.user as any)?.role === 'admin',
         update: ({ req }) => (req.user as any)?.role === 'admin',
@@ -396,6 +397,7 @@ export const Products: CollectionConfig = {
       name: 'isActive',
       type: 'checkbox',
       defaultValue: true,
+      index: true,
     },
 
     /* SELLER & STATUS */
@@ -405,18 +407,19 @@ export const Products: CollectionConfig = {
       type: 'relationship',
       relationTo: 'sellers' as any,
       required: true,
+      index: true,
       admin: {
         position: 'sidebar',
       },
     },
     {
-        name: 'createdBy',
-        type: 'relationship',
-        relationTo: 'users',
-        admin: {
-            readOnly: true,
-            position: 'sidebar',
-        }
+      name: 'createdBy',
+      type: 'relationship',
+      relationTo: 'users',
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+      }
     },
 
     {
@@ -424,6 +427,7 @@ export const Products: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'draft',
+      index: true,
       access: {
         update: ({ req }) => (req.user as any)?.role === 'admin',
       },

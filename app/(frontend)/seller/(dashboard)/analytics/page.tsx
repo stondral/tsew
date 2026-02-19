@@ -3,10 +3,10 @@ import config from "@/payload.config";
 import { redirect } from "next/navigation";
 import { getServerSideUser } from "@/lib/auth";
 import { getSellersWithPermission } from "@/lib/rbac/permissions";
-import { AnalyticsDashboard } from "@/components/seller/AnalyticsDashboard";
 import { Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import AnalyticsDashboard from "@/components/seller/AnalyticsDashboardWrapper";
 
 export const dynamic = 'force-dynamic';
 

@@ -22,8 +22,8 @@ export function mapPayloadProductToDomain(p: any): DomainProduct {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ? p.media.map((m: any) => resolveMediaUrl(m))
       : p.media
-      ? [resolveMediaUrl(p.media)]
-      : [],
+        ? [resolveMediaUrl(p.media)]
+        : [],
     category: {
       name: typeof p.category === 'object' ? p.category.name : (p.category || 'Uncategorized')
     },
@@ -40,8 +40,8 @@ export function mapPayloadProductToDomain(p: any): DomainProduct {
     })),
     refundPolicy: p.refundPolicy,
     seller: p.seller ? {
-        id: typeof p.seller === 'object' ? p.seller.id : p.seller,
-        name: typeof p.seller === 'object' ? (p.seller.name || p.seller.username) : undefined,
+      id: typeof p.seller === 'object' ? p.seller.id : p.seller,
+      name: typeof p.seller === 'object' ? (p.seller.name || p.seller.username) : undefined,
     } : undefined
   };
 }

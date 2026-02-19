@@ -10,10 +10,10 @@ export const Orders: CollectionConfig = {
       if (!req.user) return false;
       const user = req.user as any;
       if (user.role === "admin") return true;
-      
+
       // Get sellers where user has order.view permission
       const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'order.view');
-      
+
       return {
         or: [
           { user: { equals: user.id } }, // Buyer: their own orders
@@ -28,10 +28,10 @@ export const Orders: CollectionConfig = {
       if (!req.user) return false;
       const user = req.user as any;
       if (user.role === "admin") return true;
-      
+
       // Get sellers where user has permission to update orders
       const allowedSellers = await getSellersWithPermission(req.payload, user.id, 'order.update_status');
-      
+
       if (allowedSellers.length === 0) return false;
 
       return {
@@ -68,6 +68,7 @@ export const Orders: CollectionConfig = {
       type: "relationship",
       relationTo: "users",
       required: true,
+      index: true,
       admin: { position: "sidebar", readOnly: true },
     },
 
@@ -91,6 +92,7 @@ export const Orders: CollectionConfig = {
       type: "relationship",
       relationTo: "sellers" as any,
       required: true,
+      index: true,
       admin: { position: "sidebar" },
     },
 
@@ -126,10 +128,10 @@ export const Orders: CollectionConfig = {
         { name: "variantId", type: "text" },
         { name: "priceAtPurchase", type: "number", required: true },
         { name: "quantity", type: "number", required: true, min: 1 },
-        { 
-          name: "seller", 
-          type: "relationship", 
-          relationTo: "sellers" as any, 
+        {
+          name: "seller",
+          type: "relationship",
+          relationTo: "sellers" as any,
           required: true,
           admin: { readOnly: true }
         },
@@ -237,6 +239,7 @@ export const Orders: CollectionConfig = {
       name: "paymentStatus",
       type: "select",
       defaultValue: "pending",
+      index: true,
       options: [
         { label: "Pending", value: "pending" },
         { label: "Paid", value: "paid" },
@@ -308,13 +311,13 @@ export const Orders: CollectionConfig = {
     afterChange: [
       async ({ doc, previousDoc, operation, req }) => {
         const { payload } = req;
-        
+
         const isNewSuccess = operation === 'create' && (doc.paymentMethod === 'cod' || doc.paymentStatus === 'paid');
         const isPaidNow = operation === 'update' && doc.paymentStatus === 'paid' && previousDoc?.paymentStatus === 'pending';
 
         if (isNewSuccess || isPaidNow) {
           const sellerItemsMap: Record<string, any[]> = {};
-          
+
           for (const item of doc.items) {
             try {
               const sellerId = typeof item.seller === 'string' ? item.seller : item.seller?.id;
@@ -334,7 +337,7 @@ export const Orders: CollectionConfig = {
               if (item.variantId && product.variants) {
                 const variant = product.variants.find((v: any) => v.id === item.variantId);
                 newStock = Math.max(0, (variant?.stock || 0) - item.quantity);
-                
+
                 await (payload as any).update({
                   collection: 'products',
                   id: product.id,
@@ -361,11 +364,11 @@ export const Orders: CollectionConfig = {
                 });
 
                 if (sellerOrg && sellerOrg.owner) {
-                   const owner = typeof sellerOrg.owner === 'string' 
-                     ? await (payload as any).findByID({ collection: 'users', id: sellerOrg.owner })
-                     : sellerOrg.owner;
+                  const owner = typeof sellerOrg.owner === 'string'
+                    ? await (payload as any).findByID({ collection: 'users', id: sellerOrg.owner })
+                    : sellerOrg.owner;
 
-                   if (owner) {
+                  if (owner) {
                     const lowStockHtml = getEmailTemplate('low-stock-alert', {
                       productName: product.name,
                       currentStock: newStock.toString(),
@@ -378,7 +381,7 @@ export const Orders: CollectionConfig = {
                       subject: `⚠️ Low Stock Alert: ${product.name}`,
                       html: lowStockHtml,
                     });
-                   }
+                  }
                 }
               }
             } catch (err) {
@@ -434,11 +437,11 @@ export const Orders: CollectionConfig = {
               });
 
               if (sellerOrg && sellerOrg.owner) {
-                const owner = typeof sellerOrg.owner === 'string' 
-                   ? await (payload as any).findByID({ collection: 'users', id: sellerOrg.owner })
-                   : sellerOrg.owner;
+                const owner = typeof sellerOrg.owner === 'string'
+                  ? await (payload as any).findByID({ collection: 'users', id: sellerOrg.owner })
+                  : sellerOrg.owner;
 
-                const address = typeof doc.shippingAddress === 'string' 
+                const address = typeof doc.shippingAddress === 'string'
                   ? await (payload as any).findByID({ collection: 'addresses', id: doc.shippingAddress })
                   : doc.shippingAddress;
 

@@ -51,6 +51,7 @@ export const Reviews: CollectionConfig = {
       name: 'rating',
       type: 'number',
       required: true,
+      index: true,
       min: 1,
       max: 5,
     },

@@ -53,6 +53,7 @@ export const Addresses: CollectionConfig = {
       type: "relationship",
       relationTo: "users",
       required: true,
+      index: true,
       admin: {
         position: "sidebar",
         readOnly: true,

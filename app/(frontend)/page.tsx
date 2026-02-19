@@ -1,9 +1,11 @@
 import Hero from "@/components/Hero";
-import ProductsGrid from "@/components/products/ProductsGrid";
 import { getSellerFromHeaders, getCapabilities, resolveTheme, type ExtendedUser } from "@/lib/seller";
 import StoreLayout from "@/components/storefront/StoreLayout";
 import StoreSections from "@/components/storefront/StoreSections";
 import { Metadata } from "next";
+import { Suspense } from "react";
+import FeaturedProducts from "@/components/products/FeaturedProducts";
+import { ProductsGridSkeleton } from "@/components/products/ProductsGridSkeleton";
 
 export const metadata: Metadata = {
   title: "Buy Premium Products Online in India | Multi-Vendor Marketplace | Stondemporium",
@@ -109,48 +111,22 @@ export default async function HomePage() {
     }
   }
 
-  // PLATFORM DEFAULT - Fetch featured products via API
-  try {
-    // Use relative URL for server-side fetch to ensure it hits the same server (dev or prod)
-    const productsRes = await fetch(`${SITE_URL}/api/products?type=featured&limit=8`, {
-      cache: 'force-cache',
-      next: { revalidate: 60 },
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  // PLATFORM DEFAULT
+  return (
+    <>
+      <Hero />
 
-    const { products: featuredProducts } = await productsRes.json();
+      <section className="py-12 bg-white">
+        <div className="px-4 max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6 text-center" style={{ fontFamily: "'Roboto Slab', serif" }}>
+            Featured <span className="text-orange-500">Innovations</span>
+          </h2>
 
-    return (
-      <>
-        <Hero />
-
-        <section className="py-12 bg-white">
-          <div className="px-4 max-w-6xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-center" style={{ fontFamily: "'Roboto Slab', serif" }}>
-              Featured <span className="text-orange-500">Innovations</span>
-            </h2>
-
-            <ProductsGrid products={featuredProducts || []} />
-          </div>
-        </section>
-      </>
-    );
-  } catch (error) {
-    console.error('Error fetching featured products:', error);
-    return (
-      <>
-        <Hero />
-        <section className="py-12 bg-white">
-          <div className="px-4 max-w-6xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-center" style={{ fontFamily: "'Roboto Slab', serif" }}>
-              Featured <span className="text-orange-500">Innovations</span>
-            </h2>
-            <p className="text-center text-gray-500">Unable to load products at this time.</p>
-          </div>
-        </section>
-      </>
-    );
-  }
+          <Suspense fallback={<ProductsGridSkeleton count={4} />}>
+            <FeaturedProducts />
+          </Suspense>
+        </div>
+      </section>
+    </>
+  );
 }

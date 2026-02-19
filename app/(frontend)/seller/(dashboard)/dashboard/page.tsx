@@ -1,5 +1,4 @@
 import { StatsCards } from "@/components/seller/StatsCards";
-import { RevenueChart } from "@/components/seller/RevenueChart";
 import { RecentOrdersTable } from "@/components/seller/RecentOrdersTable";
 import { BestSellingProducts } from "@/components/seller/BestSellingProducts";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,9 @@ import config from "@/payload.config";
 import { getServerSideUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getSellersWithPermission } from "@/lib/rbac/permissions";
+import RevenueChart from "@/components/seller/RevenueChartWrapper";
+
+export const dynamic = 'force-dynamic';
 
 interface User {
   id: string;

@@ -28,18 +28,36 @@ export async function GET(request: NextRequest) {
       where.seller = { equals: sellerId };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = await (payload as any).find({
-      collection: 'products',
-      where,
-      limit,
-      depth: 2,
-      overrideAccess: true,
-    });
+    // Use Redis caching layer
+    const { getProductList } = await import('@/lib/redis/product');
 
-    // Transform the data using shared mapper
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const products = data?.docs?.map((p: any) => mapPayloadProductToDomain(p)) ?? [];
+    // Define category proxy for the cache key
+    const category = type === 'featured' ? 'featured' : (type === 'seller' ? `seller-${sellerId}` : 'all');
+
+    const result = await getProductList(
+      category,
+      1, // default page
+      { limit: limit.toString() },
+      async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await (payload as any).find({
+          collection: 'products',
+          where,
+          limit,
+          depth: 1, // Reduced depth for list view performance
+          overrideAccess: true,
+        });
+
+        return {
+          docs: data?.docs?.map((p: unknown) => mapPayloadProductToDomain(p)) ?? [],
+          totalDocs: data?.totalDocs || 0,
+          totalPages: data?.totalPages || 0,
+          page: data?.page || 1,
+        };
+      }
+    );
+
+    const products = result?.products || [];
 
     return NextResponse.json({ products });
   } catch (error) {

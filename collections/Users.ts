@@ -5,7 +5,7 @@ const frontendURL = process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:30
 
 export const Users: CollectionConfig = {
   slug: "users",
-  
+
   // ✅ 1. Enable Native Auth & Verification
   auth: {
     // ✅ Store token in a httpOnly cookie for server-side middleware
@@ -16,7 +16,7 @@ export const Users: CollectionConfig = {
       generateEmailHTML: (args: any) => {
         const { token, user } = args || {};
         const url = `${frontendURL}/auth/verify?token=${token}`
-        
+
         return getEmailTemplate('welcome-mail', {
           username: user?.username || "there",
           verifyUrl: url
@@ -28,7 +28,7 @@ export const Users: CollectionConfig = {
       generateEmailHTML: (args: any) => {
         const { token, user } = args || {};
         const url = `${frontendURL}/auth/reset-password?token=${token}`
-        
+
         return getEmailTemplate('forgot-password-mail', {
           username: user?.username || "there",
           resetUrl: url
@@ -136,10 +136,10 @@ export const Users: CollectionConfig = {
     afterChange: [
       async ({ doc, previousDoc, operation, req }) => {
         // Detect Role Transition: user -> seller
-        const isRoleUpgrade = operation === 'update' && 
-                            doc.role === 'seller' && 
-                            previousDoc?.role === 'user';
-        
+        const isRoleUpgrade = operation === 'update' &&
+          doc.role === 'seller' &&
+          previousDoc?.role === 'user';
+
         if (isRoleUpgrade) {
           const { payload } = req;
           try {
@@ -189,6 +189,7 @@ export const Users: CollectionConfig = {
         { label: "Team Member", value: "sellerEmployee" },
         { label: "User", value: "user" },
       ],
+      index: true,
       access: {
         update: ({ req }) => (req.user as any)?.role === "admin",
       },
@@ -220,6 +221,7 @@ export const Users: CollectionConfig = {
     {
       name: "subscriptionId",
       type: "text",
+      index: true,
       admin: {
         position: 'sidebar',
       }
