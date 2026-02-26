@@ -6,15 +6,15 @@ import React, {
   useEffect,
   useState,
   ReactNode,
-  useCallback,
   useRef,
 } from "react";
 
-import { CartClient, CartContextType } from "./cart.types";
+import { CartClient, CartContextType, CartItemClient } from "./cart.types";
 import { loadCart, saveCart, clearCart as clearLocalCart } from "./cart.storage";
 import { upsertItem } from "./cart.utils";
-import { fetchCartFromDB, syncCartToDB, mergeGuestCart } from "./cart.api";
+import { mergeGuestCart } from "./cart.api";
 import { useAuth } from "@/components/auth/AuthContext";
+import { useCart as useTanstackCart } from "@/hooks/useCart";
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -25,119 +25,94 @@ export function CartProvider({
   children: ReactNode;
   initialCart?: CartClient;
 }) {
-  const [cart, setCart] = useState<CartClient>(initialCart || { items: [] });
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(!initialCart);
-  const { isAuthenticated } = useAuth();
-  
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const [guestCart, setGuestCart] = useState<CartClient>(initialCart || { items: [] });
   const isMountedRef = useRef(false);
 
-  // Load cart on mount or when auth status changes
-  useEffect(() => {
-    async function initializeCart() {
-      // If we have initialCart from server, skip fetch
-      if (initialCart) {
-        console.log("🛒 Using server-provided cart");
-        setIsLoading(false);
-        isMountedRef.current = true;
-        return;
-      }
-      
-      console.log("🛒 Initializing cart, authenticated:", isAuthenticated);
+  // TanStack hook handles caching, optimistic updates, and background DB sync to Redis
+  const {
+    items: serverItems,
+    isLoading: isServerLoading,
+    addToCart: serverAdd,
+    removeFromCart: serverRemove,
+    updateQuantity: serverUpdate,
+    clearCart: serverClear,
+    refetch: refetchServerCart
+  } = useTanstackCart();
 
-      if (isAuthenticated) {
-        // Load from database
-        console.log("🛒 Loading cart from database...");
-        const dbCart = await fetchCartFromDB();
+  // Load guest cart from localStorage on mount
+  useEffect(() => {
+    if (!initialCart && !isAuthenticated) {
+      setGuestCart(loadCart());
+    }
+    isMountedRef.current = true;
+  }, [initialCart, isAuthenticated]);
+
+  // Handle merging guest cart when user logs in
+  useEffect(() => {
+    async function handleAuthChange() {
+      if (isAuthenticated && isMountedRef.current) {
+        const localGuestCart = loadCart();
         
-        // Check if there's a guest cart in localStorage
-        const guestCart = loadCart();
-        
-        if (guestCart.items.length > 0) {
-          // Merge guest cart with DB cart
-          console.log("🛒 Merging guest cart with DB cart...");
-          const mergedCart = await mergeGuestCart(guestCart);
-          setCart(mergedCart);
-          
-          // Clear localStorage after successful merge
+        if (localGuestCart.items.length > 0) {
+          console.log("🛒 Merging guest cart to Redis through API...");
+          // Merge guest cart with user's Redis cart in DB
+          await mergeGuestCart(localGuestCart);
+          // Refetch Tanstack query to get the newly merged cart
+          await refetchServerCart();
+          // Clear localStorage so we don't merge it again
           clearLocalCart();
-        } else {
-          setCart(dbCart);
+          setGuestCart({ items: [] });
         }
-      } else {
-        // Load from localStorage for guest users
-        console.log("🛒 Loading cart from localStorage (guest)...");
-        setCart(loadCart());
       }
-
-      setIsLoading(false);
-      isMountedRef.current = true;
     }
+    handleAuthChange();
+  }, [isAuthenticated, refetchServerCart]);
 
-    initializeCart();
-  }, [isAuthenticated, initialCart]);
-
-  // Debounced sync to database
-  const debouncedSyncToDB = useCallback((cartToSync: CartClient) => {
-    if (!isAuthenticated || !isMountedRef.current) return;
-
-    // Clear existing timeout
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
-    }
-
-    // Set new timeout
-    syncTimeoutRef.current = setTimeout(() => {
-      console.log("🛒 Syncing cart to database...");
-      syncCartToDB(cartToSync);
-    }, 1000); // 1 second debounce
-  }, [isAuthenticated]);
-
-  // Save cart changes
+  // Save guest cart changes to localStorage (only if unauthenticated)
   useEffect(() => {
-    if (!isMountedRef.current || isLoading) return;
+    if (!isMountedRef.current || isAuthLoading) return;
 
-    if (isAuthenticated) {
-      // Save to localStorage as backup + sync to DB
-      saveCart(cart);
-      debouncedSyncToDB(cart);
-    } else {
-      // Guest users: only localStorage
-      saveCart(cart);
+    if (!isAuthenticated) {
+      saveCart(guestCart);
     }
-  }, [cart, isLoading, isAuthenticated, debouncedSyncToDB]);
+  }, [guestCart, isAuthLoading, isAuthenticated]);
+
+  // We expose a unified cart interface depending on auth state
+  const currentCart: CartClient = isAuthenticated 
+    ? { items: serverItems } 
+    : guestCart;
+    
+  const isLoading = isAuthLoading || (isAuthenticated && isServerLoading && serverItems.length === 0);
 
   const addToCart = (
     productId: string,
     variantId: string | null = null,
     quantity = 1,
   ) => {
-    console.log("🛒 Adding to cart:", { productId, variantId, quantity });
-
-    setCart((prev) => {
-      const newCart = {
-        items: upsertItem(prev.items, {
-          productId,
-          variantId,
-          quantity,
-        }),
-      };
-      console.log("🛒 New cart state:", newCart);
-      return newCart;
-    });
+    if (isAuthenticated) {
+      serverAdd({ productId, variantId, quantity });
+    } else {
+      setGuestCart((prev) => ({
+        items: upsertItem(prev.items, { productId, variantId, quantity }),
+      }));
+    }
   };
 
   const removeFromCart = (
     productId: string,
     variantId: string | null = null,
   ) => {
-    setCart((prev) => ({
-      items: prev.items.filter(
-        (i) =>
-          !(i.productId === productId && (i.variantId ?? null) === variantId),
-      ),
-    }));
+    if (isAuthenticated) {
+      serverRemove({ productId, variantId });
+    } else {
+      setGuestCart((prev) => ({
+        items: prev.items.filter(
+          (i) => !(i.productId === productId && (i.variantId ?? null) === variantId),
+        ),
+      }));
+    }
   };
 
   const updateQuantity = (
@@ -150,25 +125,30 @@ export function CartProvider({
       return;
     }
 
-    setCart((prev) => ({
-      items: prev.items.map((i) =>
-        i.productId === productId && (i.variantId ?? null) === variantId
-          ? { ...i, quantity }
-          : i,
-      ),
-    }));
+    if (isAuthenticated) {
+      serverUpdate({ productId, variantId, quantity });
+    } else {
+      setGuestCart((prev) => ({
+        items: prev.items.map((i) =>
+          i.productId === productId && (i.variantId ?? null) === variantId
+            ? { ...i, quantity }
+            : i,
+        ),
+      }));
+    }
   };
 
   const clearCart = () => {
-    setCart({ items: [] });
     if (isAuthenticated) {
-      // Also clear from database
-      syncCartToDB({ items: [] });
+      serverClear();
+    } else {
+      setGuestCart({ items: [] });
+      clearLocalCart();
     }
   };
 
   const value: CartContextType = {
-    cart,
+    cart: currentCart,
     addToCart,
     removeFromCart,
     updateQuantity,

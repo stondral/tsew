@@ -60,8 +60,9 @@ function AuthContent() {
   useEffect(() => {
     if (isAuthenticated) {
       router.push(redirectPath);
+      router.refresh();
     }
-  }, [isAuthenticated, router, redirectPath]);
+  }, [isAuthenticated, redirectPath, router]);
 
   // Live verification listener: when waiting for verification, listen and auto-login on success.
   useEffect(() => {
@@ -127,6 +128,7 @@ function AuthContent() {
     try {
       await login(loginEmail, loginPassword);
       router.push(redirectPath);
+      router.refresh();
     } catch (err: unknown) {
       const errorMessage = (err as Error).message || "Login failed. Please check your credentials.";
       

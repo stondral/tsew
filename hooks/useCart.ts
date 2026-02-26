@@ -102,7 +102,7 @@ export function useCart() {
   const addToCartMutation = useMutation({
     mutationFn: async (params: AddToCartParams) => {
       const currentItems = queryClient.getQueryData<RedisCartItem[]>(['cart']) || [];
-      
+
       // Find existing item
       const existingIndex = currentItems.findIndex(
         (item) => item.productId === params.productId && item.variantId === params.variantId
@@ -158,7 +158,7 @@ export function useCart() {
       }
       console.error('Failed to add to cart:', err);
     },
-    onSuccess: () => {
+    onSettled: () => {
       // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
@@ -168,7 +168,7 @@ export function useCart() {
   const updateQuantityMutation = useMutation({
     mutationFn: async (params: UpdateQuantityParams) => {
       const currentItems = queryClient.getQueryData<RedisCartItem[]>(['cart']) || [];
-      
+
       const updatedItems = currentItems.map((item) => {
         if (item.productId === params.productId && item.variantId === params.variantId) {
           return { ...item, quantity: params.quantity };
@@ -199,7 +199,7 @@ export function useCart() {
       }
       console.error('Failed to update quantity:', err);
     },
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
   });
@@ -208,7 +208,7 @@ export function useCart() {
   const removeFromCartMutation = useMutation({
     mutationFn: async (params: RemoveFromCartParams) => {
       const currentItems = queryClient.getQueryData<RedisCartItem[]>(['cart']) || [];
-      
+
       const updatedItems = currentItems.filter(
         (item) => !(item.productId === params.productId && item.variantId === params.variantId)
       );
@@ -233,7 +233,7 @@ export function useCart() {
       }
       console.error('Failed to remove from cart:', err);
     },
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
   });
@@ -257,7 +257,7 @@ export function useCart() {
       }
       console.error('Failed to clear cart:', err);
     },
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     },
   });
@@ -271,18 +271,18 @@ export function useCart() {
     items,
     itemCount,
     isEmpty,
-    
+
     // State
     isLoading,
     error,
-    
+
     // Actions
     addToCart: addToCartMutation.mutate,
     updateQuantity: updateQuantityMutation.mutate,
     removeFromCart: removeFromCartMutation.mutate,
     clearCart: clearCartMutation.mutate,
     refetch,
-    
+
     // Mutation states
     isAdding: addToCartMutation.isPending,
     isUpdating: updateQuantityMutation.isPending,

@@ -11,9 +11,7 @@ import { getReviews } from "@/app/(frontend)/products/actions/reviews";
 
 // Memoize product fetch to prevent duplicate queries in metadata + page render
 const getCachedProduct = cache(async (slug: string) => {
-  console.time(`[PERF] Product fetch: ${slug}`);
   const product = await getProductBySlug(slug);
-  console.timeEnd(`[PERF] Product fetch: ${slug}`);
   return product;
 });
 

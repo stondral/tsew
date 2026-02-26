@@ -11,24 +11,7 @@ import { Plus,MapPin,
 } from "lucide-react";
 import Link from "next/link";
 import AddressForm from "./AddressForm";
-import { deleteAddressAction, setDefaultAddressAction } from "./actions";
-
-interface Address {
-  id: string;
-  label: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  apartment: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  addressType: "home" | "work" | "other";
-  isDefault: boolean;
-}
+import { useAddresses, Address } from "@/hooks/useAddresses";
 
 interface AddressClientProps {
   initialAddresses: Address[];
@@ -38,7 +21,8 @@ export default function AddressClient({
   initialAddresses,
 }: AddressClientProps) {
   const router = useRouter();
-  const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
+  const { addresses, deleteAddress, setDefaultAddress } = useAddresses(initialAddresses);
+  
   const [showForm, setShowForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | undefined>();
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
@@ -61,13 +45,10 @@ export default function AddressClient({
     setLoading((prev) => ({ ...prev, [id]: true }));
 
     try {
-      const result = await deleteAddressAction(id);
-      if (result.success) {
-        setAddresses((prev) => prev.filter((addr) => addr.id !== id));
-      } else {
+      const result = await deleteAddress(id);
+      if (!result.success) {
         alert(result.error || "Failed to delete address");
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_err) {
       alert("An unexpected error occurred");
     } finally {
@@ -79,18 +60,10 @@ export default function AddressClient({
     setLoading((prev) => ({ ...prev, [id]: true }));
 
     try {
-      const result = await setDefaultAddressAction(id);
-      if (result.success) {
-        setAddresses((prev) =>
-          prev.map((addr) => ({
-            ...addr,
-            isDefault: addr.id === id,
-          })),
-        );
-      } else {
+      const result = await setDefaultAddress(id);
+      if (!result.success) {
         alert(result.error || "Failed to set default address");
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_err) {
       alert("An unexpected error occurred");
     } finally {
@@ -99,6 +72,9 @@ export default function AddressClient({
   };
 
   const handleFormSuccess = () => {
+    // AddressForm still uses the server action which triggers revalidatePath
+    // Our TanStack query relies on initialData, so router.refresh gets new initialData 
+    // seamlessly triggering a UI update. Or optimistic UI handles it.
     router.refresh();
   };
 

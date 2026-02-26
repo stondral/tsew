@@ -2,6 +2,7 @@ import { getPayload } from "payload";
 import config from "@/payload.config";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { getCachedMessages, cacheMessages } from "@/lib/redis/chat";
 
 export async function GET(req: Request) {
   try {
@@ -43,6 +44,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const cachedMessages = await getCachedMessages(ticketId);
+    if (cachedMessages) {
+      console.log(`🚀 Redis Cache HIT for ticket messages: ${ticketId}`);
+      return NextResponse.json({ docs: cachedMessages });
+    }
+
+    console.log(`🐌 Cache MISS for ticket messages: ${ticketId}. Fetching from DB...`);
     const { docs: messages } = await payload.find({
       collection: 'support-messages',
       where: {
@@ -52,6 +60,9 @@ export async function GET(req: Request) {
       limit: 100,
       overrideAccess: true, // We already verified access above
     });
+
+    // Populate the cache in the background (fire-and-forget or await)
+    await cacheMessages(ticketId, messages);
 
     return NextResponse.json({ docs: messages });
   } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any

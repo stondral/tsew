@@ -1,9 +1,9 @@
 {
   "name": "stondemporium",
-  "version": "27.6.16",
+  "version": "27.7.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack | pino-pretty",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

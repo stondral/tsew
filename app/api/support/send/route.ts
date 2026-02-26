@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPayload } from 'payload';
 import config from '@/payload.config';
 import { broadcastToTicket } from '@/app/api/support/stream/manager';
+import { appendCachedMessage } from '@/lib/redis/chat';
 
 function resolveSenderType(user: unknown): 'admin' | 'customer' | 'seller' {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,6 +84,9 @@ export async function POST(request: NextRequest) {
     };
 
     broadcastToTicket(ticketId, broadcastData);
+
+    // Append to Redis cache to avoid slow DB reads for active sessions
+    await appendCachedMessage(ticketId, broadcastData);
 
     // Also broadcast notification to admin stream
     broadcastToTicket('admin-notifications', {

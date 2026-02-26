@@ -25,6 +25,7 @@ import { finaliseRazorpayCheckout } from "./actions/finaliseRazorpayCheckout";
 import { createAddress } from "./actions/createAddress";
 import { CalculationResult } from "@/lib/cart/calculations";
 import { validateDiscountCode } from "@/lib/discount/validateDiscountCode";
+import { useShippingRates } from "@/hooks/useShipping";
 
 interface Address {
   id: string;
@@ -93,6 +94,20 @@ export default function PremiumCheckout({
     state: "",
     pincode: "",
   });
+
+  const selectedAddress = addresses.find(a => a.id === selectedAddressId);
+  const destinationPincode = selectedAddress?.pincode || formData.pincode || "";
+
+  // Dynamic Shipping Calculation via TanStack
+  const { shippingCost: dynamicShipping, isLoading: isShippingLoading } = useShippingRates(
+    {
+      originPincode: "400001", // Default warehouse
+      destinationPincode,
+      weight: 1000, // Default 1kg for now
+      cartSubtotal: totals?.subtotal,
+    },
+    !!destinationPincode && !!totals // Only fetch when we have destination and subtotal
+  );
 
   const [showNewAddress, setShowNewAddress] = useState(false);
 
@@ -681,7 +696,12 @@ export default function PremiumCheckout({
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
                     <span className={totals.shipping === 0 ? "text-green-600 font-medium" : ""}>
-                      {totals.shipping === 0 ? "Free" : `₹${totals.shipping.toLocaleString("en-IN")}`}
+                      {isShippingLoading 
+                        ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        : (dynamicShipping === 0 
+                            ? "Free" 
+                            : `₹${dynamicShipping.toLocaleString("en-IN")}`)
+                      }
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-600">
@@ -757,7 +777,7 @@ export default function PremiumCheckout({
                   
                   <div className="border-t border-gray-200 pt-3 flex justify-between text-lg font-bold text-gray-800">
                     <span>Total</span>
-                    <span className="text-orange-600">₹{totals.total.toLocaleString("en-IN")}</span>
+                    <span className="text-orange-600">₹{(totals.total - totals.shipping + dynamicShipping).toLocaleString("en-IN")}</span>
                   </div>
                 </div>
 

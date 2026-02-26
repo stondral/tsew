@@ -3,10 +3,9 @@
 import {
   createContext,
   useContext,
-  useEffect,
-  useState,
   ReactNode,
 } from "react";
+import { useAuthQuery } from "@/hooks/useAuthQuery";
 
 interface User {
   id: string;
@@ -45,32 +44,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchUser = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/users/me", {
-        method: "GET",
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        setUser(null);
-        return;
-      }
-
-      const data = await res.json();
-      // Payload returns { user, exp, token } (token may be omitted depending on config)
-      setUser(data?.user ?? null);
-    } catch (err) {
-      console.error("AuthContext: fetchUser failed:", err);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { user, isLoading, refetch, setUserCache } = useAuthQuery();
 
   const login = async (email: string, password: string) => {
     const response = await fetch("/api/users/login", {
@@ -85,10 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data?.message || "Login failed");
+      let message = data?.errors?.[0]?.message || data?.message || "Login failed. Please check your credentials.";
+      // Clean up Payload's internal error formatting like "53:41] ERROR: The email..."
+      if (message.includes("ERROR:")) {
+        message = message.split("ERROR:").pop()?.trim() || message;
+      }
+      throw new Error(message);
     }
 
-    await fetchUser();
+    await refetch();
   };
 
   const register = async (registerData: RegisterData): Promise<RegisterResult> => {
@@ -125,17 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Logout error:", err);
     } finally {
-      setUser(null);
+      setUserCache(null);
     }
   };
 
   const refresh = async () => {
-    await fetchUser();
+    await refetch();
   };
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
 
   const value: AuthContextType = {
     user,

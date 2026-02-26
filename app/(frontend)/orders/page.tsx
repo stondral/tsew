@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Package, ChevronRight, Calendar, Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthContext";
@@ -9,34 +8,11 @@ import { Button } from "@/components/ui/button";
 import { resolveMediaUrl } from "@/lib/utils";
 import Image from "next/image";
 
+import { useOrders } from "@/hooks/useOrders";
+
 export default function MyOrdersPage() {
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [orders, setOrders] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (isAuthLoading) return;
-    if (!isAuthenticated || !user?.id) { // Ensure user.id is available
-      setIsLoading(false); // Stop loading if not authenticated or user.id is missing
-      return;
-    }
-
-    const fetchOrders = async () => {
-      try {
-        // Fetch orders directly from the API, passing the user ID
-        const res = await fetch(`/api/orders/list?userId=${user.id}`);
-        const data = await res.json();
-        setOrders(data.orders || []);
-      } catch (e) {
-        console.error("Failed to fetch orders", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, [isAuthenticated, isAuthLoading, user?.id]); // Add user.id to dependencies
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { orders, isLoading } = useOrders();
 
   if (isAuthLoading || isLoading) {
     return (

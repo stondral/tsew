@@ -7,6 +7,7 @@ import { buildConfig } from "payload";
 import { fileURLToPath } from "url";
 import sharp from "sharp";
 import nodemailer from "nodemailer";
+import mongoose from "mongoose";
 
 import { Users } from "./collections/Users";
 import { Media } from "./collections/Media";
@@ -39,6 +40,21 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, MediaFolders, Categories, Products, Orders, Addresses, Feedback, Warehouses, DiscountCodes, Sellers, SellerMembers, TeamInvites, Carts, SupportTickets, SupportMessages, Wishlist, Reviews, VerificationSessions],
+  onInit: async () => {
+    try {
+      // Enforce a 3-day (259200 seconds) TTL on support messages
+      const db = mongoose.connection.db;
+      if (db) {
+        await db.collection("support-messages").createIndex(
+          { createdAt: 1 },
+          { expireAfterSeconds: 3 * 24 * 60 * 60 }
+        );
+        console.log("✅ MongoDB TTL Index established for support-messages (3 days)");
+      }
+    } catch (err) {
+      console.error("⚠️ Failed to establish TTL index:", err);
+    }
+  },
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",
   email: nodemailerAdapter({

@@ -56,14 +56,10 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      {/* DevTools only in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <ReactQueryDevtools 
-          initialIsOpen={false} 
-          position="bottom"
-          buttonPosition="bottom-right"
-        />
-      )}
+      <ReactQueryDevtools 
+        initialIsOpen={false} 
+        buttonPosition="bottom-left"
+      />
     </QueryClientProvider>
   )
 }

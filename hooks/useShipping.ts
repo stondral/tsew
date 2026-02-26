@@ -13,6 +13,7 @@ interface ShippingParams {
   originPincode: string;
   destinationPincode: string;
   weight: number; // in grams
+  cartSubtotal?: number;
   dimensions?: {
     length: number;
     width: number;

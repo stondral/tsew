@@ -72,6 +72,7 @@ export function useWishlist() {
     data: wishlist,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ['wishlist'],
     queryFn: fetchWishlist,
@@ -150,7 +151,7 @@ export function useWishlist() {
 
   // Helper: Check if product is in wishlist
   const isInWishlist = (productId: string): boolean => {
-    return wishlist?.products.includes(productId) || false;
+    return wishlist?.products?.includes(productId) || false;
   };
 
   // Helper: Toggle wishlist
@@ -166,7 +167,7 @@ export function useWishlist() {
     wishlist,
     products: wishlist?.products || [],
     items: wishlist?.items || [],
-    itemCount: wishlist?.products.length || 0,
+    itemCount: wishlist?.products?.length || 0,
     isLoading,
     error,
     addToWishlist,
@@ -175,6 +176,7 @@ export function useWishlist() {
     isInWishlist,
     isAdding,
     isRemoving,
+    refetch,
   };
 }
 

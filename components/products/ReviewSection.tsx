@@ -24,7 +24,7 @@ export default function ReviewSection({ productId, initialReviews = [] }: Review
   const [userContext, setUserContext] = useState<{ userId: string | null; role: string | null }>({ userId: null, role: null });
   const [loading, setLoading] = useState(!initialReviews.length);
 
-  const fetchReviews = useCallback(async () => {
+  const fetchReviews = useCallback(async (shouldRefresh = false) => {
     try {
       const [reviewsRes, canReviewRes] = await Promise.all([
         getReviews(productId),
@@ -37,8 +37,10 @@ export default function ReviewSection({ productId, initialReviews = [] }: Review
       setCanReview(canReviewRes.canReview);
       setUserContext({ userId: canReviewRes.userId || null, role: canReviewRes.role || null });
       
-      // Refresh router to update product stats in parent components
-      router.refresh();
+      if (shouldRefresh === true) {
+        // Refresh router to update product stats in parent components
+        router.refresh();
+      }
     } catch (err) {
       console.error("Failed to load reviews:", err);
     } finally {
@@ -55,10 +57,11 @@ export default function ReviewSection({ productId, initialReviews = [] }: Review
         setLoading(false);
       });
     } else {
-      // Otherwise fetch everything
-      fetchReviews();
+      // Otherwise fetch everything without triggering a router refresh loop
+      fetchReviews(false);
     }
-  }, [fetchReviews, productId, initialReviews]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]);
 
   const handleSync = async () => {
     const promise = syncAllProductRatings();
@@ -104,7 +107,7 @@ export default function ReviewSection({ productId, initialReviews = [] }: Review
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
             >
-              <ReviewForm productId={productId} onSuccess={fetchReviews} />
+              <ReviewForm productId={productId} onSuccess={() => fetchReviews(true)} />
             </motion.div>
           )}
 
@@ -139,7 +142,7 @@ export default function ReviewSection({ productId, initialReviews = [] }: Review
               ))}
             </div>
           ) : (
-            <ReviewList reviews={reviews} currentUser={userContext} onRefresh={fetchReviews} productId={productId} />
+            <ReviewList reviews={reviews} currentUser={userContext} onRefresh={() => fetchReviews(true)} productId={productId} />
           )}
         </div>
       </div>

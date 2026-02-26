@@ -4,16 +4,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 export const logger = pino({
     level: isProduction ? 'info' : 'debug',
-    transport: isProduction
-        ? undefined
-        : {
-            target: 'pino-pretty',
-            options: {
-                colorize: true,
-                translateTime: 'SYS:standard',
-                ignore: 'pid,hostname',
-            },
-        },
+    // Removed transport because pino worker threads crash in Next.js (Turbopack/API routes).
+    // To get pretty logs in development, run `npm run dev | pino-pretty` instead.
     // Redact sensitive information
     redact: {
         paths: [

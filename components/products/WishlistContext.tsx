@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { toggleWishlist as toggleWishlistAction, getWishlist } from "@/app/(frontend)/products/actions/wishlist";
 import { useAuth } from "@/components/auth/AuthContext";
+import { useWishlist as useTanstackWishlist } from "@/hooks/useWishlist";
 import { toast } from "sonner";
 
 interface WishlistContextType {
@@ -15,73 +15,83 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const [wishlistIds, setWishlistIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated } = useAuth();
+  const [guestWishlist, setGuestWishlist] = useState<string[]>([]);
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  // TanStack handles the DB/Redis logic for authenticated users
+  const { 
+    products: serverWishlistIds, 
+    isLoading: isServerLoading, 
+    toggleWishlist: serverToggleWishlist,
+    refetch: refetchServerWishlist
+  } = useTanstackWishlist();
 
   useEffect(() => {
-    async function fetchWishlist() {
-      if (isAuthenticated) {
-        setIsLoading(true);
+    // Load guest wishlist on mount if not authenticated
+    if (!isAuthenticated) {
+      const local = localStorage.getItem("stond_wishlist");
+      if (local) {
         try {
-          const res = await getWishlist();
-          if (res.ok && res.products) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setWishlistIds(res.products.map((p: any) => (p && typeof p === 'object') ? p.id : p));
-          }
-        } catch (err) {
-          console.error("Failed to fetch wishlist:", err);
+          setGuestWishlist(JSON.parse(local));
+        } catch {
+          setGuestWishlist([]);
         }
-      } else {
-        setWishlistIds([]);
       }
-      setIsLoading(false);
     }
-    fetchWishlist();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    // Merge guest wishlist when user logs in
+    if (isAuthenticated) {
+      const local = localStorage.getItem("stond_wishlist");
+      if (local) {
+        try {
+          const localItems: string[] = JSON.parse(local);
+          if (localItems.length > 0) {
+            // Merge logic: For now we just sync the items to DB one by one
+            // In a complete implementation we might want a bulk merge endpoint
+            Promise.all(localItems.map(id => serverToggleWishlist(id)))
+              .then(() => {
+                localStorage.removeItem("stond_wishlist");
+                setGuestWishlist([]);
+                refetchServerWishlist();
+              });
+          }
+        } catch (e) {
+          console.error("Failed to parse local wishlist on merge", e);
+        }
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   const toggleWishlist = async (productId: string) => {
-    if (!isAuthenticated) {
-      toast.error("Please login to save items to your wishlist.");
-      return;
-    }
-
-    // Optimistic update
-    const wasWishlisted = wishlistIds.includes(productId);
-    if (wasWishlisted) {
-      setWishlistIds(prev => prev.filter(id => id !== productId));
+    if (isAuthenticated) {
+      await serverToggleWishlist(productId);
     } else {
-      setWishlistIds(prev => [...prev, productId]);
-    }
-
-    try {
-      const res = await toggleWishlistAction(productId);
-      if (!res.ok) {
-        // Revert on error
-        if (wasWishlisted) {
-          setWishlistIds(prev => [...prev, productId]);
-        } else {
-          setWishlistIds(prev => prev.filter(id => id !== productId));
-        }
-        toast.error(res.error || "Failed to update wishlist");
-      } else {
-        toast.success(res.wishlisted ? "Added to wishlist" : "Removed from wishlist");
-      }
-    } catch {
-      // Revert on crash
-      if (wasWishlisted) {
-        setWishlistIds(prev => [...prev, productId]);
-      } else {
-        setWishlistIds(prev => prev.filter(id => id !== productId));
-      }
-      toast.error("An error occurred. Please try again.");
+      const wasWishlisted = guestWishlist.includes(productId);
+      const newWishlist = wasWishlisted 
+        ? guestWishlist.filter(id => id !== productId)
+        : [...guestWishlist, productId];
+      
+      setGuestWishlist(newWishlist);
+      localStorage.setItem("stond_wishlist", JSON.stringify(newWishlist));
+      toast.success(wasWishlisted ? "Removed from wishlist" : "Added to wishlist");
     }
   };
 
-  const isWishlisted = (productId: string) => wishlistIds.includes(productId);
+  const currentWishlistIds = isAuthenticated ? serverWishlistIds : guestWishlist;
+  const isLoading = isAuthLoading || (isAuthenticated && isServerLoading);
+  
+  const isWishlisted = (productId: string) => currentWishlistIds.includes(productId);
 
   return (
-    <WishlistContext.Provider value={{ wishlistIds, toggleWishlist, isLoading, isWishlisted }}>
+    <WishlistContext.Provider value={{ 
+      wishlistIds: currentWishlistIds, 
+      toggleWishlist, 
+      isLoading, 
+      isWishlisted 
+    }}>
       {children}
     </WishlistContext.Provider>
   );

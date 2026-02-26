@@ -2,30 +2,13 @@ import type { ReactNode } from 'react';
 import type { Viewport } from 'next';
 import QueryProvider from '@/providers/QueryProvider';
 import Script from 'next/script';
-import { Montserrat, Outfit, Playfair_Display, Roboto_Slab } from 'next/font/google';
+import { Roboto } from 'next/font/google';
 
-const montserrat = Montserrat({
+const brandFont = Roboto({
+  weight: ['400', '500', '700'],
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-montserrat',
-});
-
-const outfit = Outfit({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-outfit',
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-playfair',
-});
-
-const robotoSlab = Roboto_Slab({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-roboto-slab',
+  variable: '--font-brand',
 });
 
 export const viewport: Viewport = {
@@ -145,16 +128,9 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en" className={`${montserrat.variable} ${outfit.variable} ${playfair.variable} ${robotoSlab.variable}`}>
+    <html lang="en" className={`${brandFont.variable} font-sans`}>
        <head>
-        {/* Preload critical local fonts if any */}
-        <link
-          rel="preload"
-          href="/fonts/inter-var.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
+        {/* No local preloads needed, next/font handles the critical path */}
       </head>
       <body>
         <Script
