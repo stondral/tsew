@@ -6,6 +6,9 @@ import { Metadata } from "next";
 import { Suspense } from "react";
 import FeaturedProducts from "@/components/products/FeaturedProducts";
 import { ProductsGridSkeleton } from "@/components/products/ProductsGridSkeleton";
+import { getPayload } from "payload";
+import config from "@/payload.config";
+import { mapPayloadProductToDomain } from "@/lib/products";
 
 export const metadata: Metadata = {
   title: "Buy Premium Products Online in India | Multi-Vendor Marketplace | Stondemporium",
@@ -55,52 +58,40 @@ export const metadata: Metadata = {
 export const revalidate = 60; // ISR with 60-second revalidation
 export const runtime = 'nodejs';
 
-// Use localhost in development, but allow production URL override
-const getBaseUrl = () => {
-  // In production, use the NEXT_PUBLIC_PAYLOAD_URL or NEXT_PUBLIC_FRONTEND_URL
-  if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXT_PUBLIC_PAYLOAD_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
-  }
-  // In development, always use localhost to avoid cross-server issues
-  return 'http://localhost:3000';
-};
-
-const SITE_URL = getBaseUrl();
-
 export default async function HomePage() {
   const sellerContext = await getSellerFromHeaders();
+  const payload = await getPayload({ config });
 
   if (sellerContext) {
     try {
-      // Fetch seller data via API
-      const sellerRes = await fetch(`${SITE_URL}/api/seller?id=${sellerContext.id}`, {
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const seller = await payload.findByID({
+        collection: 'users',
+        id: sellerContext.id,
+      }) as unknown as ExtendedUser;
 
-      if (sellerRes.ok) {
-        const { seller } = await sellerRes.json() as { seller: ExtendedUser };
+      if (seller) {
         const capabilities = getCapabilities(seller.plan);
         const theme = resolveTheme(seller.theme, capabilities);
 
-        // Fetch seller products via API
-        const productsRes = await fetch(`${SITE_URL}/api/products?type=seller&sellerId=${seller.id}&limit=8`, {
-          cache: 'force-cache',
-          next: { revalidate: 60 },
-          headers: {
-            'Content-Type': 'application/json',
+        const data = await payload.find({
+          collection: 'products',
+          where: {
+            status: { equals: 'live' },
+            isActive: { equals: true },
+            seller: { equals: seller.id },
           },
+          limit: 8,
+          depth: 1,
+          overrideAccess: true,
         });
 
-        const { products: sellerProducts } = await productsRes.json();
+        const sellerProducts = data?.docs?.map((p: unknown) => mapPayloadProductToDomain(p)) || [];
 
         return (
           <StoreLayout theme={theme}>
             <StoreSections 
               seller={seller} 
-              products={sellerProducts || []} 
+              products={sellerProducts} 
               layoutControl={capabilities.layoutControl} 
             />
           </StoreLayout>
