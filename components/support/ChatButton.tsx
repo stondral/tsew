@@ -13,6 +13,9 @@ export function ChatButton() {
   const [ticket, setTicket] = useState<{ id: string; status: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const pathname = usePathname();
+  const isOrdersPage = pathname?.startsWith("/orders") || 
+                       pathname?.startsWith("/order-success") || 
+                       pathname?.startsWith("/order-failure");
   const { user } = useAuth();
 
   // Detect Order ID from URL
@@ -47,10 +50,12 @@ export function ChatButton() {
   }, [orderId]);
 
   useEffect(() => {
-    if (isOpen && user && !ticket) {
+    if (isOpen && user && !ticket && isOrdersPage) {
       fetchTicket();
     }
-  }, [isOpen, user, ticket, fetchTicket]);
+  }, [isOpen, user, ticket, fetchTicket, isOrdersPage]);
+
+  if (!isOrdersPage) return null;
 
   const handleNewTicket = () => {
     setTicket(null);

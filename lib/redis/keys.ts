@@ -82,6 +82,9 @@ export const RedisKeys = {
   productReviews: (productId: string, page = 1) => `reviews:${productId}:${page}`,
   supportMessages: (ticketId: string) => `support:messages:${ticketId}`,
 
+  adminSummary: () => 'admin:summary',
+  adminChartData: (range: string) => `admin:chart:${range}`,
+
   // Pattern matchers for bulk operations
   patterns: {
     allCarts: 'cart:*',

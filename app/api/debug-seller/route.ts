@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug");
   const sellerId = request.nextUrl.searchParams.get("sellerId");
   
-  /* eslint-disable @typescript-eslint/no-explicit-any */
   const payload = await getPayload({ config });
 
   if (request.nextUrl.searchParams.get("action") === "check_seller") {
@@ -15,7 +14,7 @@ export async function GET(request: NextRequest) {
     if (!sid) return new NextResponse("Missing check_id", { status: 400 });
     
     try {
-      const seller = await (payload as any).findByID({
+      const seller = await payload.findByID({
         collection: "sellers",
         id: sid,
       });
@@ -25,22 +24,22 @@ export async function GET(request: NextRequest) {
     }
   }
   if (request.nextUrl.searchParams.get("action") === "fix_product") {
-    const slug = request.nextUrl.searchParams.get("target_slug");
+    const p_slug = request.nextUrl.searchParams.get("target_slug");
     const newSellerId = request.nextUrl.searchParams.get("new_seller_id");
     
-    if (!slug || !newSellerId) return new NextResponse("Missing params", { status: 400 });
+    if (!p_slug || !newSellerId) return new NextResponse("Missing params", { status: 400 });
 
     await payload.update({
       collection: "products",
-      where: { slug: { equals: slug } },
+      where: { slug: { equals: p_slug } },
       data: { seller: newSellerId }
     });
     
-    return new NextResponse(`Updated product ${slug} with seller ${newSellerId}`, { status: 200 });
+    return new NextResponse(`Updated product ${p_slug} with seller ${newSellerId}`, { status: 200 });
   }
 
   if (sellerId) {
-    const seller = await (payload as any).findByID({
+    const seller = await payload.findByID({
       collection: "sellers",
       id: sellerId,
     });
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (request.nextUrl.searchParams.get("action") === "scan_integrity") {
-    const products = await (payload as any).find({
+    const products = await payload.find({
       collection: "products",
       limit: 50,
       depth: 0, 
@@ -60,16 +59,16 @@ export async function GET(request: NextRequest) {
         report.push(`Product ${p.slug}: No seller field`);
         continue;
       }
-      const sellerId = typeof p.seller === 'object' ? p.seller.id : p.seller;
+      const p_sellerId = typeof p.seller === 'object' ? (p.seller as any).id : p.seller; // eslint-disable-line @typescript-eslint/no-explicit-any
       
       try {
-        const seller = await (payload as any).findByID({
+        const seller = await payload.findByID({
             collection: "sellers",
-            id: sellerId
+            id: p_sellerId
         });
         report.push(`Product ${p.slug}: OK (Seller: ${seller.name})`);
       } catch {
-        report.push(`Product ${p.slug}: BROKEN LINK (Seller ID: ${sellerId})`);
+        report.push(`Product ${p.slug}: BROKEN LINK (Seller ID: ${p_sellerId})`);
       }
     }
     
@@ -80,13 +79,13 @@ export async function GET(request: NextRequest) {
   }
 
   if (!slug) {
-    const products = await (payload as any).find({
+    const products = await payload.find({
       collection: "products",
       limit: 1,
       depth: 3,
     });
     if (products.docs.length > 0) {
-      const p = products.docs[0] as any;
+      const p = products.docs[0];
       const keys = Object.keys(p).join(', ');
       return new NextResponse(`KEYS:${keys}\nFULL_DATA:${JSON.stringify(p, null, 2)}`, {
         status: 200, 
@@ -96,7 +95,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "No products found" });
   }
   
-  const data = await (payload as any).find({
+  const data = await payload.find({
     collection: "products",
     where: {
       slug: { equals: slug },
@@ -110,13 +109,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  const p = data.docs[0] as any;
+  const p = data.docs[0];
+  const p_seller = (p as any).seller; // eslint-disable-line @typescript-eslint/no-explicit-any
   
   return NextResponse.json({
     id: p.id,
     name: p.name,
-    sellerType: typeof p.seller,
-    seller: p.seller,
-    sellerKeys: typeof p.seller === 'object' ? Object.keys(p.seller) : null
+    sellerType: typeof p_seller,
+    seller: p_seller,
+    sellerKeys: typeof p_seller === 'object' ? Object.keys(p_seller as object) : null
   });
 }
