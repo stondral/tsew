@@ -52,7 +52,7 @@ export default function AITagsClient({ products: initialProducts }: { products: 
                     : p
             ));
         }
-    } catch (_err) {
+    } catch {
         showToast("AI Sync Failed. Please try again.", "error");
     } finally {
         setLoadingId(null);
@@ -99,7 +99,7 @@ export default function AITagsClient({ products: initialProducts }: { products: 
             ));
             setEditingId(null);
         }
-    } catch (_err) {
+    } catch {
         showToast("Failed to save changes", "error");
     } finally {
         setLoadingId(null);

@@ -4,7 +4,7 @@ import config from "@/payload.config";
 import ProductFilters from "@/components/products/ProductFilters";
 import ProductSort from "@/components/products/ProductSort";
 import ProductList from "@/components/products/ProductList";
-import ProductSkeleton from "@/components/products/ProductSkeleton";
+import { ProductsGridSkeleton } from "@/components/products/ProductsGridSkeleton";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Metadata } from "next";
@@ -12,7 +12,7 @@ import { Metadata } from "next";
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
-  const { q, category } = await searchParams;
+  const { category } = await searchParams;
   
   let title = "Shop Premium Products Online in India | Stondemporium";
   let description = "Browse our extensive collection of premium products at Stondemporium. Fast delivery across India. Shop now!";
@@ -35,18 +35,6 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       `best ${category.toLowerCase()}`,
       `premium ${category.toLowerCase()}`,
       "online shopping India",
-      "Stondemporium"
-    ];
-  }
-
-  if (q) {
-    title = `${q} - Search Results | Stondemporium`;
-    description = `Find ${q} and more at Stondemporium. Premium products with fast delivery across India. Shop now!`;
-    keywords = [
-      q,
-      `buy ${q.toLowerCase()} online`,
-      `${q.toLowerCase()} India`,
-      "online shopping",
       "Stondemporium"
     ];
   }
@@ -83,20 +71,6 @@ interface PageProps {
     sort?: string;
     view?: "grid" | "list";
   }>;
-}
-
-function ProductsGridSkeleton({ view }: { view?: "grid" | "list" }) {
-  const gridClasses = view === "list" 
-    ? "flex flex-col gap-6" 
-    : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4";
-
-  return (
-    <div className={gridClasses}>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <ProductSkeleton key={i} view={view} />
-      ))}
-    </div>
-  );
 }
 
 export default async function ProductsPage({ searchParams }: PageProps) {

@@ -109,8 +109,8 @@ export default async function HomePage() {
 
       <section className="py-12 bg-white">
         <div className="px-4 max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6 text-center" style={{ fontFamily: "'Roboto Slab', serif" }}>
-            Featured <span className="text-orange-500">Innovations</span>
+          <h2 className="text-3xl md:text-4xl font-display font-bold mb-10 text-center tracking-tight text-slate-900" style={{ fontFamily: 'var(--font-display), sans-serif' }}>
+            Featured <span className="text-orange-600">Innovations</span>
           </h2>
 
           <Suspense fallback={<ProductsGridSkeleton count={4} />}>

@@ -20,12 +20,13 @@ interface ProductFilters {
 }
 
 interface ProductListResponse {
-  docs: RedisProduct[];
+  docs?: RedisProduct[];
+  products: RedisProduct[];
   totalPages: number;
   totalDocs: number;
   page: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
+  hasNextPage?: boolean;
+  hasPrevPage?: boolean;
 }
 
 /**
@@ -71,7 +72,7 @@ export function useProducts(filters: ProductFilters = {}) {
   });
 
   return {
-    products: data?.docs || [],
+    products: data?.products || [],
     totalPages: data?.totalPages || 0,
     totalDocs: data?.totalDocs || 0,
     currentPage: data?.page || 1,

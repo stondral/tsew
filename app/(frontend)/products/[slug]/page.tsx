@@ -7,7 +7,26 @@ export const revalidate = 3600; // Revalidate every hour
 import ProductDetailClient from "@/components/products/ProductDetailClient";
 import { resolveMediaUrl } from "@/lib/media";
 import { getProductBySlug } from "@/lib/models/domain/getProductBySlug";
-import { getReviews } from "@/app/(frontend)/products/actions/reviews";
+import { getPayload } from "payload";
+import config from "@/payload.config";
+
+export async function generateStaticParams() {
+  const payload = await getPayload({ config });
+  const products = await payload.find({
+    collection: 'products',
+    where: {
+      status: { equals: 'live' },
+      isActive: { equals: true },
+    },
+    limit: 100, // Pre-render top 100 products for instant loading
+    select: { slug: true },
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return products.docs.map((product: any) => ({
+    slug: product.slug,
+  }));
+}
 
 // Memoize product fetch to prevent duplicate queries in metadata + page render
 const getCachedProduct = cache(async (slug: string) => {
@@ -100,13 +119,12 @@ export async function generateMetadata({
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
 
-  // Fetch product and reviews in parallel on server
-  const [product, reviewsData] = await Promise.all([
-    getCachedProduct(slug),
-    getCachedProduct(slug).then(p => p ? getReviews(p.id) : { success: false, reviews: [] })
-  ]);
+  // Fetch primary product data first (fast)
+  const product = await getCachedProduct(slug);
   
   if (!product) notFound();
+
+  // Reviews are fetched on the client for "instant" perceived performance
 
   const images = (product.images ?? []).map((src) => resolveMediaUrl(src));
   const price = product.variants?.[0]?.price || product.basePrice || 0;
@@ -198,7 +216,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <ProductDetailClient 
         product={product} 
         images={images}
-        initialReviews={reviewsData.success ? reviewsData.reviews : []}
+        initialReviews={[]} // We fetch these on the client for "instant" perceived performance
       />
     </>
   );

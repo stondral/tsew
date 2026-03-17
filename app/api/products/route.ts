@@ -57,9 +57,7 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const products = result?.products || [];
-
-    return NextResponse.json({ products });
+    return NextResponse.json(result);
   } catch (error) {
     logger.error({ err: error, type, sellerId }, 'Error fetching products');
     return NextResponse.json(

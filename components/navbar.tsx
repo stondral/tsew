@@ -58,13 +58,11 @@ export default function Navbar() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[400px] border-r-0 bg-white/80 backdrop-blur-2xl px-0">
-            <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }} />
-            
-            <SheetTitle className="px-6 text-2xl font-black tracking-tighter text-slate-900 mt-6">
-              STOND <span className="text-orange-500 italic">MENU</span>
+          <SheetContent side="left" className="w-[300px] border-r border-slate-100 bg-white px-0">
+            <SheetTitle className="px-6 text-xl font-bold tracking-tight text-slate-900 mt-8 font-display" style={{ fontFamily: 'var(--font-display), sans-serif' }}>
+              STOND <span className="text-orange-600">MENU</span>
             </SheetTitle>
-            <SheetDescription className="px-6 text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-1 mb-8">
+            <SheetDescription className="px-6 text-slate-400 font-medium text-[10px] uppercase tracking-wider mt-1 mb-8 font-display" style={{ fontFamily: 'var(--font-display), sans-serif' }}>
               Premium Shopping Experience
             </SheetDescription>
             
@@ -75,25 +73,26 @@ export default function Navbar() {
                     {NAV_LINKS.map((link, idx) => (
                       <motion.div
                         key={link.href}
-                        initial={{ x: -20, opacity: 0 }}
+                        initial={{ x: -10, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: idx * 0.1, type: "spring", stiffness: 100 }}
+                        transition={{ delay: idx * 0.05, type: "spring", stiffness: 120 }}
                       >
                         <Link
                           href={link.href}
                           onClick={() => setIsMenuOpen(false)}
-                          className={`group flex items-center justify-between px-6 py-4 rounded-2xl transition-all ${
+                          className={`group flex items-center justify-between px-6 py-3 rounded-xl transition-all font-display ${
                             isActive(link.href, pathname)
-                              ? "bg-orange-50 text-orange-600 shadow-sm"
+                              ? "bg-orange-50/50 text-orange-600"
                               : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                           }`}
+                          style={{ fontFamily: 'var(--font-display), sans-serif' }}
                         >
-                          <span className={`text-lg font-black tracking-tight ${isActive(link.href, pathname) ? "" : ""}`}>
+                          <span className={`text-base font-semibold tracking-tight`}>
                             {link.label}
                           </span>
                           
                           {link.badge && (
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ring-1 ${
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ring-1 ${
                               link.badge === 'NEW' 
                                 ? "bg-orange-500 text-white ring-orange-500" 
                                 : "bg-white text-orange-500 ring-orange-200"
@@ -109,12 +108,12 @@ export default function Navbar() {
               </AnimatePresence>
             </nav>
 
-            <div className="absolute bottom-10 left-0 w-full px-6">
-              <div className="p-6 rounded-[2rem] bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-xl shadow-orange-200">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Partner with us</p>
-                <h4 className="text-xl font-black mb-4 tracking-tight">Become a Stond Seller</h4>
+            <div className="absolute bottom-8 left-0 w-full px-6">
+              <div className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-display" style={{ fontFamily: 'var(--font-display), sans-serif' }}>Partner with us</p>
+                <h4 className="text-base font-bold mb-4 tracking-tight text-slate-900 font-display" style={{ fontFamily: 'var(--font-display), sans-serif' }}>Become a Stond Seller</h4>
                 <Link href="/auth" onClick={() => setIsMenuOpen(false)}>
-                  <Button className="w-full bg-white text-orange-600 hover:bg-white/90 rounded-xl font-black text-xs uppercase tracking-widest border-none h-12">
+                  <Button className="w-full bg-slate-900 text-white hover:bg-slate-800 rounded-lg font-bold text-xs uppercase tracking-wider h-11 border-none shadow-sm">
                     Join Today
                   </Button>
                 </Link>

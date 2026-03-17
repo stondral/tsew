@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
       // Parallel fetching for performance
       const [users, orders, products, feedback, support, leads] = await Promise.all([
-        payload.count({ collection: 'users' }),
+        payload.count({ collection: 'users' }).then(r => typeof r === 'number' ? r : r.totalDocs),
         payload.find({
           collection: 'orders',
           limit: 1000,
@@ -38,10 +38,10 @@ export async function GET(request: NextRequest) {
         payload.count({
           collection: 'products',
           where: { status: { equals: 'pending' } },
-        }),
-        payload.count({ collection: 'feedback' }),
-        payload.count({ collection: 'support-tickets' as any, where: { status: { equals: 'open' } } }),
-        payload.count({ collection: 'leads' as any }),
+        }).then(r => typeof r === 'number' ? r : r.totalDocs),
+        payload.count({ collection: 'feedback' }).then(r => typeof r === 'number' ? r : r.totalDocs),
+        payload.count({ collection: 'support-tickets' as any, where: { status: { equals: 'open' } } }).then(r => typeof r === 'number' ? r : r.totalDocs),
+        payload.count({ collection: 'leads' as any }).then(r => typeof r === 'number' ? r : r.totalDocs),
       ]);
 
       const totalRevenue = orders.docs.reduce((acc, order: any) => acc + (order.total || 0), 0);

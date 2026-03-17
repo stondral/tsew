@@ -24,6 +24,13 @@ function AuthContent() {
   const redirectPath = searchParams?.get("redirect") || "/";
   const { login, register, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
+  
+  useEffect(() => {
+    const tab = searchParams?.get("tab");
+    if (tab === "register" || tab === "login") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   // Live verification state
   const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);

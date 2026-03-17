@@ -74,7 +74,10 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
         <div className="absolute top-4 right-4 flex gap-2">
           {product.featured && (
-            <Badge className="bg-amber-500 text-white border-none shadow-lg shadow-amber-500/30 font-black text-[10px] uppercase tracking-widest px-3 py-1 rounded-xl">
+            <Badge 
+              className="bg-amber-500 text-white border-none shadow-lg shadow-amber-500/30 font-display font-medium text-[10px] uppercase tracking-widest px-3 py-1 rounded-xl"
+              style={{ fontFamily: 'var(--font-display), sans-serif' }}
+            >
               Featured
             </Badge>
           )}

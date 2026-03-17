@@ -9,14 +9,8 @@ module.exports = {
 	theme: {
 		extend: {
 			fontFamily: {
-				display: [
-					'ui-serif',
-					'Georgia',
-					'Cambria',
-					'"Times New Roman"',
-					'Times',
-					'serif'
-				],
+				display: ['var(--font-display)', 'sans-serif'],
+				sans: ['var(--font-brand)', 'sans-serif'],
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

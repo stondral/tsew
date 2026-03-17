@@ -5,6 +5,7 @@ import config from "@/payload.config";
 import { bedrockClient, NOVA_LITE_MODEL_ID } from "@/lib/ai/client";
 import { ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 import { headers } from "next/headers";
+import { resolveMediaUrl } from "@/lib/media";
 
 /**
  * Analyzes user's style based on order history
@@ -101,6 +102,71 @@ export async function analyzeUserStyleAction() {
 }
 
 /**
+ * Fetches user's last 10 orders for AI widget
+ */
+export async function getUserOrdersAction() {
+    const payload = await getPayload({ config });
+    const headerStack = await headers();
+    const { user } = await payload.auth({ headers: headerStack });
+
+    if (!user) return { orders: [] };
+
+    try {
+        const orders = await payload.find({
+            collection: 'orders',
+            where: { user: { equals: user.id } },
+            sort: '-createdAt',
+            limit: 10,
+            depth: 1
+        });
+
+        return {
+            orders: orders.docs.map(o => ({
+                id: o.id,
+                orderNumber: o.orderNumber,
+                status: o.status,
+                total: o.total,
+                date: o.orderDate || o.createdAt,
+                image: o.items?.[0]?.productImage || null,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                waybill: (o.delivery as any)?.trackingId || null
+            }))
+        };
+    } catch (err) {
+        console.error("Fetch orders failed:", err);
+        return { orders: [] };
+    }
+}
+
+/**
+ * Wraps Delhivery tracking for AI context
+ */
+export async function trackAIOrderAction(orderId: string, waybill: string) {
+    const { trackShipment } = await import("@/lib/delhivery");
+    try {
+        const data = await trackShipment({ waybill });
+        if (!data || !data.ShipmentData || data.ShipmentData.length === 0) {
+            return { error: "Tracking data not yet available for this waybill." };
+        }
+
+        const shipment = data.ShipmentData[0].Shipment;
+        const status = shipment.Status.Status;
+        const location = shipment.Status.ScannedLocation || "In transit";
+        const lastUpdate = shipment.Status.StatusDateTime;
+
+        return {
+            status,
+            location,
+            lastUpdate,
+            summary: `Current Status: ${status} at ${location}. last updated: ${new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(lastUpdate))}`
+        };
+    } catch (err) {
+        console.error("Tracking failed:", err);
+        return { error: "Unable to connect to tracking service right now." };
+    }
+}
+
+/**
  * Gets style recommendations based on a user's text query, chat history, and optional image
  */
 export async function getStyleRecommendationsAction(query: string, history: Record<string, unknown>[] = [], image?: string | null) {
@@ -131,18 +197,38 @@ export async function getStyleRecommendationsAction(query: string, history: Reco
             TASK: 
             - Help the user find and explore products across all categories (electronics, lifestyle, home goods, etc.).
             - Respond DIRECTLY to the user with helpful and sophisticated advice. 
+            - If the user asks about their "orders", "history", or "status", respond that you'll pull up their recent activity and return ["get_order_history"] in the actions array.
             
             Return a JSON object with:
             1. "analysis": A CONCISE (max 2 sentences), expert response addressed TO THE USER. 
-            2. "recommendedItems": A list of 2-3 specific property-based product descriptors (e.g., ["noise cancelling headphones", "minimalist desk lamp", "leather backpack"]). 
-               IMPORTANT: Be specific about materials, colors, or technical features. Avoid broad terms like "mens" or "casual".
-            3. "filters": An optional object containing search filters like "maxPrice".
-            4. "actions": An optional array of valid action strings. Currently supported: ["reserve_pickup"]. Include this if the user asks for a specific item and might want to pick it up.
+            2. "recommendedItems": A list of 2-3 specific product descriptors.
+            3. "filters": An optional object for search filters.
+            4. "actions": An optional array of valid action strings. Currently supported: ["reserve_pickup", "get_order_history"].
             
             Return ONLY the raw JSON.
         `;
 
         const aiResponse = await callNova(prompt, image);
+
+        // Handle specific AI-requested actions
+        if (aiResponse.actions?.includes("get_order_history")) {
+            const orderResult = await getUserOrdersAction();
+            const filteredActions = aiResponse.actions.filter((a: string) => a !== "get_order_history");
+            
+            const recommendations = await getActualProductsFromKeywords(
+                payload, 
+                aiResponse.recommendedItems || [], 
+                aiResponse.filters
+            );
+
+            return {
+                analysis: aiResponse.analysis,
+                orders: orderResult.orders,
+                recommendations,
+                actions: filteredActions.length > 0 ? filteredActions : undefined
+            };
+        }
+
         let recommendations = await getActualProductsFromKeywords(
             payload, 
             aiResponse.recommendedItems || [], 
@@ -290,7 +376,7 @@ async function getActualProductsFromKeywords(payload: any, recommendedItems: str
         name: p.name,
         price: p.basePrice,
         category: typeof p.category === 'object' ? p.category?.title : 'Collection',
-        image: p.media?.[0]?.url || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800',
+        image: resolveMediaUrl(p.media?.[0]),
         slug: p.slug
     }));
 }
@@ -308,7 +394,7 @@ async function getTrendingProducts(payload: any) { // eslint-disable-line @types
         name: p.name,
         price: p.basePrice,
         category: typeof p.category === 'object' ? p.category?.title : 'Collection',
-        image: p.media?.[0]?.url || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800',
+        image: resolveMediaUrl(p.media?.[0]),
         slug: p.slug
     }));
 }

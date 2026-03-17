@@ -44,8 +44,17 @@ export default function ProductCard({ product, view = "grid", priority = false, 
 
   const isList = view === "list";
 
+  // Pre-load image on hover for "instant" feel
+  const prefetchProductImage = () => {
+    if (images[0]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const img = new (window as any).Image();
+      img.src = resolveMediaUrl(images[0]);
+    }
+  };
+
   return (
-    <>
+    <div onMouseEnter={prefetchProductImage} className="h-full">
       {/* CARD */}
       <motion.div
         whileHover={{ y: isList ? 0 : -3 }}
@@ -99,7 +108,10 @@ export default function ProductCard({ product, view = "grid", priority = false, 
           {/* BADGES */}
           <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
             {product.featured && (
-              <Badge className="bg-orange-500 text-white text-[9px] font-bold tracking-wide px-1.5 py-0.5 min-h-0">
+              <Badge 
+                className="bg-orange-500 text-white text-[10px] font-display font-bold tracking-wider px-2 py-0.5 min-h-0"
+                style={{ fontFamily: 'var(--font-display), sans-serif' }}
+              >
                 FEATURED
               </Badge>
             )}
@@ -212,6 +224,6 @@ export default function ProductCard({ product, view = "grid", priority = false, 
           </div>
         </div>
       </motion.div>
-    </>
+    </div>
   );
 }

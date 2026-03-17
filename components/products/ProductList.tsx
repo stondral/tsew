@@ -22,11 +22,7 @@ export default function ProductList({ q, category, minPrice, maxPrice, sort, vie
   });
 
   if (isLoading) {
-    return (
-      <div className={view === "list" ? "flex flex-col gap-6" : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"}>
-        <ProductsGridSkeleton count={8} />
-      </div>
-    );
+    return <ProductsGridSkeleton count={8} view={view} />;
   }
 
   if (error || !products) {

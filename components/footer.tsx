@@ -7,11 +7,11 @@ import logoston from "./logoston.png";
 
 export default function Footer() {
   return (
-    <footer className="relative z-20 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 text-gray-900 border-t border-gray-300">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="relative z-20 bg-slate-50 text-slate-900 border-t border-slate-200">
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand Section */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center gap-3">
               <Image
                 src={logoston}
@@ -119,7 +119,9 @@ export default function Footer() {
                 className="flex items-center gap-2 text-gray-700 hover:text-orange-500 transition-all text-sm font-medium group"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-200 group-hover:bg-orange-500 transition-colors" />
-                Join as a Partner
+                <span className="text-gray-400 hover:text-orange-500 transition-colors">
+                  Join as a Partner
+                </span>
               </Link>
             </div>
           </div>

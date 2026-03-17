@@ -21,23 +21,31 @@ export default function VoiceSearchOverlay({ onClose }: VoiceSearchOverlayProps)
   const [status, setStatus] = useState<string>("Ready to search");
   const [mounted, setMounted] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [isBraveBrowser, setIsBraveBrowser] = useState(false);
   const [isManualInput, setIsManualInput] = useState(false);
   const recognitionRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const addLog = useCallback((message: string) => {
     console.log(`[VoiceSearch] ${message}`);
-    setLogs(prev => [...prev.slice(-4), message]); // Keep last 5 logs
+    setLogs(prev => [...prev, message].slice(-5)); // Keep last 5 logs
   }, []);
 
   useEffect(() => {
     setMounted(true);
+    // Preliminary Brave check
+    const checkBrave = async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isBrave = (navigator as any).brave !== undefined && await (navigator as any).brave.isBrave();
+      if (isBrave) setIsBraveBrowser(true);
+    };
+    checkBrave();
   }, []);
 
   const stopListening = useCallback(() => {
     addLog("Stop requested");
     if (recognitionRef.current) {
       try {
-        (recognitionRef.current as any).stop(); // eslint-disable-line @typescript-eslint/no-explicit-any
+        recognitionRef.current.stop();
         addLog("Recognition stopped");
       } catch {
         addLog("Error stopping recognition");
@@ -51,12 +59,6 @@ export default function VoiceSearchOverlay({ onClose }: VoiceSearchOverlayProps)
     setError(null);
     setStatus("BUSY");
     
-    // Detect Brave
-    const isBrave = (navigator as any).brave !== undefined && await (navigator as any).brave.isBrave(); // eslint-disable-line @typescript-eslint/no-explicit-any
-    if (isBrave) {
-      addLog("Brave Detected");
-    }
-
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
       addLog("Speech API MISSING");
       setError("Speech recognition is not supported in this browser.");
@@ -82,10 +84,10 @@ export default function VoiceSearchOverlay({ onClose }: VoiceSearchOverlayProps)
     addLog("Instantiating Engine V5...");
     setStatus("STARTING");
     
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition; // eslint-disable-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     const recognition = new SpeechRecognition();
 
-    // Use single-shot for better compatibility if continuous hangs
     recognition.continuous = false; 
     recognition.interimResults = true;
     recognition.lang = "en-US";
@@ -96,7 +98,8 @@ export default function VoiceSearchOverlay({ onClose }: VoiceSearchOverlayProps)
       setStatus("LISTENING");
     };
 
-    recognition.onresult = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
       let interimTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcriptText = event.results[i][0].transcript;
@@ -110,10 +113,11 @@ export default function VoiceSearchOverlay({ onClose }: VoiceSearchOverlayProps)
       if (interimTranscript) setTranscript(interimTranscript);
     };
 
-    recognition.onerror = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (event: any) => {
       addLog(`ON_ERROR: ${event.error}`);
       if (event.error === "not-allowed") {
-        setError("Microphone blocked. If you use Brave, enable 'Google Services' in settings.");
+        setError("Microphone blocked. Please allow mic access in your browser settings.");
         setStatus("BLOCKED");
       } else if (event.error === "no-speech") {
         setStatus("IDLE");
@@ -151,16 +155,19 @@ export default function VoiceSearchOverlay({ onClose }: VoiceSearchOverlayProps)
       timer = setTimeout(() => {
         if (status === "STARTING" && !isListening) {
           addLog("STUCK: Auto-resetting...");
-          setError("Voice engine did not respond. Check if your browser is blocking it in the address bar, or try typing below.");
+          if (isBraveBrowser) {
+            setError("Brave is blocking voice search. Please enable 'Google Services for Push Messaging and Speech' in brave://settings/googleSync and refresh.");
+          } else {
+            setError("Voice engine timed out. Please enable your mic in the browser address bar or system settings.");
+          }
           setStatus("IDLE");
           setIsListening(false);
-          // Show manual input as fallback
           setIsManualInput(true);
         }
-      }, 4000);
+      }, 5000);
     }
     return () => clearTimeout(timer);
-  }, [status, isListening, addLog]);
+  }, [status, isListening, addLog, isBraveBrowser]);
 
   useEffect(() => {
     // We strictly wait for a user click to avoid browser security hangs

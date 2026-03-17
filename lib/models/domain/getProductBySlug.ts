@@ -38,7 +38,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       isActive: { equals: true },
     },
     limit: 1,
-    depth: 2,
+    depth: 1, // Relationships are 1 level deep
     select: {
       name: true,
       slug: true,
@@ -48,11 +48,8 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       isActive: true,
       status: true,
       featured: true,
-      featuredUntil: true,
       sku: true,
       stock: true,
-      weight: true,
-      dimensions: true,
       seller: true,
       category: true,
       media: true,
@@ -61,7 +58,6 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       refundPolicy: true,
       averageRating: true,
       reviewCount: true,
-      ratingDistribution: true,
     },
     overrideAccess: true,
   });

@@ -9,17 +9,17 @@ export default function StoreSections({ seller, products, layoutControl }: { sel
       {/* Dynamic Hero based on layout control if needed */}
       <section className="py-20 bg-gradient-to-b from-orange-50 to-white text-center">
         <div className="max-w-4xl mx-auto px-4">
-          <h1 className="text-5xl font-extrabold text-gray-900 mb-6">
+          <h1 className="text-4xl md:text-5xl font-display font-bold text-gray-900 mb-6" style={{ fontFamily: 'var(--font-display), sans-serif' }}>
             {seller.username}&apos;s Store
           </h1>
-          <p className="text-xl text-gray-600 mb-8">
+          <p className="text-xl text-gray-600 mb-8 font-display" style={{ fontFamily: 'var(--font-display), sans-serif' }}>
             Discover our curated collection of innovative products.
           </p>
         </div>
       </section>
 
       <section className="py-16 px-4 max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-10 text-center">
+        <h2 className="text-3xl font-display font-bold text-gray-900 mb-10 text-center" style={{ fontFamily: 'var(--font-display), sans-serif' }}>
           Featured Products
         </h2>
         <ProductsGrid products={products} />

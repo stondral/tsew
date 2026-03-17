@@ -5,6 +5,7 @@ import {
   Moon, 
   Sun,
   Search,
+  Menu,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +14,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { AdminSidebar } from "./AdminSidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -47,8 +54,20 @@ export function AdminTopNav({ user }: AdminTopNavProps) {
   };
 
   return (
-    <div className="h-20 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-8 flex items-center justify-between shrink-0">
+    <div className="h-20 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-4 md:px-8 flex items-center justify-between shrink-0">
       <div className="flex items-center gap-4">
+        {/* Mobile Menu */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden h-10 w-10 text-slate-500 rounded-xl">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 border-none w-72">
+            <AdminSidebar user={user} className="w-full" />
+          </SheetContent>
+        </Sheet>
+
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
             {breadcrumbs.map((bc, i) => (

@@ -18,52 +18,24 @@ export async function GET(_req: NextRequest) {
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const orders = await (payload as any).find({
-      collection: "orders",
-      where: {
-        user: { equals: user.id },
-      },
-      sort: "-orderDate",
-      depth: 2, // Populate products for image backfilling
+    const { getUserOrders } = await import("@/lib/redis/order");
+
+    const ordersData = await getUserOrders(user.id, 1, async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = await (payload as any).find({
+        collection: "orders",
+        where: {
+          user: { equals: user.id },
+        },
+        sort: "-orderDate",
+        depth: 1, // Reduced depth for list performance
+        limit: 50,
+      });
+      return data.docs;
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const enrichedOrders = await Promise.all(orders.docs.map(async (order: any) => {
-      // If we already have images saved in the order items, just return
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (order.items.every((item: any) => item.productImage)) return order;
-
-      // Backfill images for old orders
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const enrichedItems = await Promise.all(order.items.map(async (item: any) => {
-        if (item.productImage) return item;
-
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const product = await (payload as any).findByID({
-            collection: "products",
-            id: item.productId,
-            depth: 1,
-          });
-          
-          let image = "";
-          if (product?.media?.[0]) {
-            const media = product.media[0];
-            image = typeof media === "object" ? (media.sizes?.thumbnail?.url || media.url || "") : "";
-          }
-
-          return { ...item, productImage: image };
-        } catch {
-          return item;
-        }
-      }));
-
-      return { ...order, items: enrichedItems };
-    }));
-
     return NextResponse.json({
-      orders: enrichedOrders,
+      orders: ordersData || [],
     });
   } catch (e) {
     console.error("Failed to list orders", e);

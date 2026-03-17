@@ -115,11 +115,19 @@ export async function getProductList(
     // Cache miss - fetch from DB and populate cache
     const result = await fetchFromDB();
 
+    const normalizedResult: RedisProductList = {
+      products: result.docs || [],
+      totalPages: result.totalPages || 0,
+      totalDocs: result.totalDocs || 0,
+      page: result.page || page,
+      cachedAt: new Date().toISOString(),
+    };
+
     if (result) {
       await setProductList(category, page, filters, result);
     }
 
-    return result;
+    return normalizedResult;
   } catch (error) {
     logger.error({ err: error, key }, 'Redis getProductList error, falling back to DB');
     return await fetchFromDB();

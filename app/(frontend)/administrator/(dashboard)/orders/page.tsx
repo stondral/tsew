@@ -253,7 +253,19 @@ export default function AdminOrdersPage() {
                   {order.shippingAddress && typeof order.shippingAddress === "object" && (
                     <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg text-xs">
                       <div className="flex items-center gap-1 text-slate-400 mb-1"><MapPin className="w-3 h-3" /> Shipping Address</div>
-                      <p className="text-sm">{order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}</p>
+                      <p className="font-bold text-slate-700 dark:text-slate-300">
+                        {order.shippingAddress.firstName} {order.shippingAddress.lastName}
+                      </p>
+                      <p className="text-sm">
+                        {order.shippingAddress.address}
+                        {order.shippingAddress.apartment && `, ${order.shippingAddress.apartment}`}
+                      </p>
+                      <p className="text-sm">
+                        {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Phone: {order.shippingAddress.phone}
+                      </p>
                     </div>
                   )}
 

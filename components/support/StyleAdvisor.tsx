@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
     X, Sparkles, Send, Bot, User, Loader2, 
     ArrowRight, ShoppingBag, 
-    History, TrendingUp, Zap, Camera
+    History, TrendingUp, Zap, Camera, Package
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,16 @@ interface RecommendationItem {
     slug: string;
 }
 
+interface OrderItem {
+    id: string;
+    orderNumber: string;
+    status: string;
+    total: number;
+    date: string;
+    image?: string;
+    waybill?: string;
+}
+
 interface AdvisorAction {
     label: string;
     value: string;
@@ -36,6 +46,7 @@ interface AdvisorMessage {
     explanation?: string;
     products?: RecommendationItem[];
     product?: RecommendationItem;
+    orders?: OrderItem[];
     actions?: AdvisorAction[];
     notFound?: boolean;
 }
@@ -64,11 +75,17 @@ export default function StyleAdvisor() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-[90] flex items-center gap-3 px-6 py-3.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full shadow-[0_20px_40px_rgba(249,115,22,0.3)] border border-orange-400/50 backdrop-blur-md group"
+        className={cn(
+            "fixed bottom-6 right-6 z-[90] flex items-center gap-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-[0_20px_40px_rgba(249,115,22,0.3)] border border-orange-400/50 backdrop-blur-md group transition-all",
+            "rounded-full p-3 md:px-6 md:py-3.5"
+        )}
       >
-        <div className="flex -space-x-2">
+        <div className="flex -space-x-2 md:flex">
+            <div className="h-8 w-8 md:hidden flex items-center justify-center bg-white/20 rounded-full">
+                <Bot className="w-5 h-5 text-white animate-pulse" />
+            </div>
             {[1, 2, 3].map(i => (
-                <div key={i} className="h-6 w-6 rounded-full border-2 border-orange-500 bg-orange-400 flex items-center justify-center text-[10px] font-black italic relative overflow-hidden">
+                <div key={i} className="hidden md:flex h-6 w-6 rounded-full border-2 border-orange-500 bg-orange-400 items-center justify-center text-[10px] font-black italic relative overflow-hidden">
                     <Image 
                         src={`https://i.pravatar.cc/100?u=${i + 15}`} 
                         alt="AI" 
@@ -79,7 +96,7 @@ export default function StyleAdvisor() {
                 </div>
             ))}
         </div>
-        <div className="flex flex-col items-start translate-y-[-1px]">
+        <div className="hidden md:flex flex-col items-start translate-y-[-1px]">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] leading-none opacity-80 mb-1">Stond AI</span>
             <span className="text-xs font-black tracking-tight flex items-center gap-2">
                 Can&apos;t decide? Let us analyse your style
@@ -154,11 +171,12 @@ function AdvisorModal({ onClose }: { onClose: () => void }) {
             // General query with conversational history and optional image
             const result = await getStyleRecommendationsAction(input, messages as unknown as Record<string, unknown>[], image);
             setIsTyping(false);
-            
+
             setMessages(prev => [...prev, { 
                 role: 'assistant', 
                 content: result.analysis,
                 products: result.recommendations as RecommendationItem[],
+                orders: result.orders as OrderItem[],
                 notFound: result.notFound,
                 actions: result.actions?.map((a: string) => ({
                     label: a.replace(/_/g, " "),
@@ -224,6 +242,29 @@ function AdvisorModal({ onClose }: { onClose: () => void }) {
      const label = actionValue.replace(/_/g, " ");
      setMessages(prev => [...prev, { role: 'user', content: label }]);
      processResponse(actionValue === "build_outfit" ? "Discover something new for me" : actionValue);
+  };
+
+  const handleTrack = async (orderId: string, waybill: string) => {
+    setIsTyping(true);
+    setMessages(prev => [...prev, { role: 'user', content: `Track order ${orderId}` }]);
+    
+    try {
+        const { trackAIOrderAction } = await import("@/components/support/styleAdvisorActions");
+        const result = await trackAIOrderAction(orderId, waybill);
+        setIsTyping(false);
+        
+        if (result.error) {
+            setMessages(prev => [...prev, { role: 'assistant', content: result.error }]);
+        } else {
+            setMessages(prev => [...prev, { 
+                role: 'assistant', 
+                content: `Here's the live update for your order:\n\n📍 **Current Location**: ${result.location}\n📊 **Status**: ${result.status}\n🕒 **Last Updated**: ${new Date(result.lastUpdate).toLocaleString()}\n\n${result.summary}` 
+            }]);
+        }
+    } catch {
+        setIsTyping(false);
+        setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I couldn't reach the tracking service." }]);
+    }
   };
 
   return createPortal(
@@ -423,6 +464,61 @@ function AdvisorModal({ onClose }: { onClose: () => void }) {
                                     <Zap size={14} className="group-hover:animate-pulse" />
                                     Make this a complete style?
                                 </button>
+                            )}
+                        </div>
+                    )}
+
+                    {msg.orders && (
+                        <div className="space-y-4 w-full">
+                            {msg.orders.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-3">
+                                    {msg.orders.map((order) => (
+                                        <div key={order.id} className="p-4 bg-white/[0.05] border border-white/10 rounded-[1.8rem] flex items-center gap-4 group/order transition-all hover:bg-white/[0.08] hover:border-orange-500/30">
+                                            <div className="h-14 w-14 bg-orange-500/10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden relative border border-orange-500/20">
+                                                {order.image ? (
+                                                    <Image src={order.image} alt="Order" fill unoptimized className="object-cover opacity-80 group-hover/order:opacity-100 transition-opacity" />
+                                                ) : (
+                                                    <Package size={24} className="text-orange-500/40" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[9px] font-black text-orange-500 uppercase tracking-[0.2em]">{order.orderNumber}</span>
+                                                    <span className="text-white/30 text-[9px] font-bold">
+                                                        {order.date ? new Date(order.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Recent'}
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-white font-black text-[13px] tracking-tight">₹{order.total.toLocaleString()}</h4>
+                                                <div className="flex items-center gap-1.5 mt-1">
+                                                    <div className={cn(
+                                                        "w-1.5 h-1.5 rounded-full animate-pulse",
+                                                        order.status === 'DELIVERED' ? "bg-green-500" : "bg-orange-500"
+                                                    )} />
+                                                    <p className="text-white/40 text-[9px] uppercase font-black tracking-widest leading-none">
+                                                        {order.status} {!order.waybill && "(Processing)"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {order.waybill ? (
+                                                <button 
+                                                    onClick={() => handleTrack(order.id, order.waybill!)}
+                                                    className="h-9 px-4 bg-white/5 hover:bg-orange-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 whitespace-nowrap shadow-lg hover:shadow-orange-600/20"
+                                                >
+                                                    Track
+                                                </button>
+                                            ) : (
+                                                <div className="h-9 px-3 bg-white/[0.02] border border-white/5 rounded-xl flex items-center justify-center gap-2">
+                                                    <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Awaiting ID</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-8 text-center bg-white/[0.02] border border-white/5 rounded-[2rem]">
+                                    <Package size={32} className="mx-auto mb-3 text-white/10" />
+                                    <p className="text-white/40 text-xs font-bold">No recent orders found.</p>
+                                </div>
                             )}
                         </div>
                     )}

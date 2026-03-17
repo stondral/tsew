@@ -2,13 +2,20 @@ import type { ReactNode } from 'react';
 import type { Viewport } from 'next';
 import QueryProvider from '@/providers/QueryProvider';
 import Script from 'next/script';
-import { Roboto } from 'next/font/google';
+import { Roboto, Outfit } from 'next/font/google';
 
 const brandFont = Roboto({
   weight: ['400', '500', '700'],
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-brand',
+});
+
+const displayFont = Outfit({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
+  weight: ['400', '500', '700', '900'],
 });
 
 export const viewport: Viewport = {
@@ -128,7 +135,7 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en" className={`${brandFont.variable} font-sans`}>
+    <html lang="en" className={`${brandFont.variable} ${displayFont.variable} font-sans`}>
        <head>
         {/* No local preloads needed, next/font handles the critical path */}
       </head>

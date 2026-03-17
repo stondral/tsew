@@ -79,6 +79,7 @@ export const RedisKeys = {
   wishlist: (userId: string) => `wishlist:${userId}`,
   seller: (sellerId: string) => `seller:${sellerId}`,
   userOrders: (userId: string, page = 1) => `orders:${userId}:${page}`,
+  orderDetail: (orderId: string) => `order:detail:${orderId}`,
   productReviews: (productId: string, page = 1) => `reviews:${productId}:${page}`,
   supportMessages: (ticketId: string) => `support:messages:${ticketId}`,
 
